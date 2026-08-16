@@ -6,3 +6,4 @@ httpx==0.26.0
 pandas==2.2.0
 numpy==1.26.4
 python-dotenv==1.0.1
+yfinance==0.2.36
