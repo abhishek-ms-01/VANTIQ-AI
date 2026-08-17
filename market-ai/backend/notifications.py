@@ -32,14 +32,14 @@ def check_and_send_alert(strategy_data):
             session = strategy_data.get('session_tier', 'UNKNOWN')
             
             message = (
-                f"🚨 **VANTIQ AI TRADE ALERT** 🚨\n\n"
+                f"🚨 *VANTIQ AI TRADE ALERT* 🚨\n\n"
                 f"{emoji}\n"
-                f"**Quality Score:** {score}/100\n"
-                f"**Session:** {session}\n"
-                f"**Action:** {action}\n"
-                f"**Entry:** {entry}\n"
-                f"**Stop Loss:** {sl}\n"
-                f"**Take Profit:** {tp}\n\n"
+                f"*Quality Score:* {score}/100\n"
+                f"*Session:* {session}\n"
+                f"*Action:* {action}\n"
+                f"*Entry:* {entry}\n"
+                f"*Stop Loss:* {sl}\n"
+                f"*Take Profit:* {tp}\n\n"
                 f"Open your Terminal: https://vantiq-ai.vercel.app/"
             )
             
