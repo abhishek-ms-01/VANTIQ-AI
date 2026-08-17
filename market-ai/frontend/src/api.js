@@ -1,5 +1,5 @@
-// Use the Live Render Backend URL directly
-const API_BASE_URL = 'https://vantiq-ai-1.onrender.com/api';
+// Use VITE_API_URL or fallback to local backend
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 
 export const fetchHealth = async () => {
     const response = await fetch(`${API_BASE_URL}/health`);
