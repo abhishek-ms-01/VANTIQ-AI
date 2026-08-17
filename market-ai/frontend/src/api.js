@@ -1,5 +1,5 @@
-// Dynamically use the current hostname so mobile devices on Wi-Fi can hit the backend
-const API_BASE_URL = import.meta.env.VITE_API_URL || `http://${window.location.hostname}:8000/api`;
+// Use the Live Render Backend URL directly
+const API_BASE_URL = 'https://vantiq-ai-1.onrender.com/api';
 
 export const fetchHealth = async () => {
     const response = await fetch(`${API_BASE_URL}/health`);
