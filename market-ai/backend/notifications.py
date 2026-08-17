@@ -10,28 +10,32 @@ _last_notified_regime = None
 def check_and_send_alert(strategy_data):
     global _last_notified_regime
     
-    if not strategy_data or 'regime' not in strategy_data:
+    if not strategy_data or 'direction' not in strategy_data:
         return
         
-    current_regime = strategy_data['regime']
-    score = strategy_data.get('score', 0)
+    direction = strategy_data['direction']
+    score = strategy_data.get('signal_strength', strategy_data.get('score', 0))
+    regime = strategy_data.get('regime', 'UNKNOWN')
     
-    # Only notify if we transition to a strong trade regime (>=65 or <=35)
-    # and it's different from the last notified regime to avoid spam
-    if current_regime in ['STRONG_BULLISH', 'STRONG_BEARISH']:
-        if current_regime != _last_notified_regime:
+    sig_id = f"{direction}_{regime}"
+    
+    # Notify if we get a LONG or SHORT signal
+    if direction in ['LONG', 'SHORT']:
+        if sig_id != _last_notified_regime:
             
-            emoji = "🟢 LONG GOLD" if current_regime == 'STRONG_BULLISH' else "🔴 SHORT GOLD"
-            action = "BUY/LONG" if current_regime == 'STRONG_BULLISH' else "SELL/SHORT"
+            emoji = "🟢 LONG GOLD" if direction == 'LONG' else "🔴 SHORT GOLD"
+            action = "BUY/LONG" if direction == 'LONG' else "SELL/SHORT"
             
-            entry = strategy_data.get('entry_price', 'Market')
+            entry = strategy_data.get('entry', strategy_data.get('entry_price', 'Market'))
             sl = strategy_data.get('stop_loss', 'N/A')
             tp = strategy_data.get('target_1', 'N/A')
+            session = strategy_data.get('session_tier', 'UNKNOWN')
             
             message = (
                 f"🚨 **VANTIQ AI TRADE ALERT** 🚨\n\n"
                 f"{emoji}\n"
                 f"**Quality Score:** {score}/100\n"
+                f"**Session:** {session}\n"
                 f"**Action:** {action}\n"
                 f"**Entry:** {entry}\n"
                 f"**Stop Loss:** {sl}\n"
@@ -41,10 +45,10 @@ def check_and_send_alert(strategy_data):
             
             # Fire and forget async request
             asyncio.create_task(_send_async(message))
-            _last_notified_regime = current_regime
+            _last_notified_regime = sig_id
             
-    # Reset notification lock if market goes back to neutral/weak
-    elif current_regime in ['NEUTRAL', 'WEAK_BULLISH', 'WEAK_BEARISH']:
+    # Reset notification lock if market goes back to neutral/no trade
+    elif direction == 'NO_TRADE':
         _last_notified_regime = None
 
 async def _send_async(message):

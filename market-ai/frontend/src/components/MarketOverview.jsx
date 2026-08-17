@@ -1,6 +1,13 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 
 export default function MarketOverview({ marketData, assetInfo }) {
+    const [currentTime, setCurrentTime] = useState(new Date());
+
+    useEffect(() => {
+        const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+        return () => clearInterval(timer);
+    }, []);
+
     if (!marketData) return <div className="card p-6 mb-6">Loading market data...</div>;
     
     if (marketData.status === 'DATA_UNAVAILABLE') {
@@ -49,7 +56,7 @@ export default function MarketOverview({ marketData, assetInfo }) {
                         {marketData.market_status === 'OPEN' ? 'LIVE' : marketData.market_status || 'CLOSED'}
                     </span>
                 </div>
-                <div>Updated: {new Date(marketData.timestamp || Date.now()).toLocaleTimeString()}</div>
+                <div>Update: {currentTime.toLocaleTimeString()}</div>
                 <div>Source: {marketData.provider || 'System'}</div>
             </div>
         </div>
