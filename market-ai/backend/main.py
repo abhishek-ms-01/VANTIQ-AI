@@ -6,6 +6,8 @@ from market_data.unified import get_live_price, get_historical_candles, get_mark
 import pandas as pd
 from strategies.gold_strategy import GoldStrategy
 from risk.trade_validation import validate_and_build_trade_plan
+from notifications import check_and_send_alert
+import asyncio
 
 strategy_map = {
     "GOLD": GoldStrategy()
@@ -41,6 +43,29 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+async def autonomous_trading_loop():
+    print("Starting Autonomous Trade Evaluator...")
+    while True:
+        try:
+            # Check market every 5 minutes
+            await asyncio.sleep(300)
+            strategy, data_dict = await get_strategy_data("GOLD")
+            signal = strategy.generate_signal(data_dict)
+            plan = validate_and_build_trade_plan(
+                raw_signal=signal,
+                data_df=data_dict[strategy.timeframes[0]],
+                min_rr=1.0
+            )
+            plan['regime'] = signal.get("market_regime", "UNKNOWN")
+            plan['score'] = signal.get("score", 0)
+            check_and_send_alert(plan)
+        except Exception as e:
+            print(f"Autonomous loop error: {e}")
+
+@app.on_event("startup")
+async def startup_event():
+    asyncio.create_task(autonomous_trading_loop())
 
 @app.get("/api/health")
 async def health_check():
@@ -154,7 +179,11 @@ async def get_strategy(asset: str):
         
         plan['strategy_name'] = strategy.__class__.__name__
         plan['market_regime'] = signal.get("market_regime", "UNKNOWN")
+        plan['regime'] = signal.get("market_regime", "UNKNOWN")
+        plan['score'] = signal.get("score", 0)
         plan['timeframes'] = signal.get("timeframes", strategy.timeframes)
+        
+        check_and_send_alert(plan)
         
         return plan
     except Exception as e:
