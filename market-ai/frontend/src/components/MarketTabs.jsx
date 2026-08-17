@@ -1,7 +1,7 @@
 import React from 'react';
 
 export default function MarketTabs({ activeTab, setActiveTab }) {
-    const tabs = ['INDIAN', 'FOREX', 'CRYPTO'];
+    const tabs = ['FOREX'];
     return (
         <div className="flex border-b border-light-border dark:border-dark-border mb-6 overflow-x-auto">
             {tabs.map(tab => (

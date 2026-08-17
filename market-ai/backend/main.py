@@ -4,21 +4,11 @@ from datetime import datetime
 from config import ASSETS, settings
 from market_data.unified import get_live_price, get_historical_candles, get_market_status, get_asset_info
 import pandas as pd
-from strategies.banknifty_strategy import BankNiftyStrategy
-from strategies.sensex_strategy import SensexStrategy
 from strategies.gold_strategy import GoldStrategy
-from strategies.eurusd_strategy import EurUsdStrategy
-from strategies.btc_strategy import BtcStrategy
-from strategies.eth_strategy import EthStrategy
 from risk.trade_validation import validate_and_build_trade_plan
 
 strategy_map = {
-    "BANK_NIFTY": BankNiftyStrategy(),
-    "SENSEX": SensexStrategy(),
-    "GOLD": GoldStrategy(),
-    "EURUSD": EurUsdStrategy(),
-    "BTC": BtcStrategy(),
-    "ETH": EthStrategy()
+    "GOLD": GoldStrategy()
 }
 
 async def get_strategy_data(asset: str):
@@ -55,8 +45,7 @@ app.add_middleware(
 @app.get("/api/health")
 async def health_check():
     provider_status = {
-        "twelve_data": "configured" if settings.TWELVE_DATA_API_KEY else "missing_key",
-        "upstox": "configured" if settings.UPSTOX_ACCESS_TOKEN else "missing_key"
+        "twelve_data": "configured" if settings.TWELVE_DATA_API_KEY else "missing_key"
     }
     
     return {
@@ -128,20 +117,20 @@ async def get_analysis(asset: str):
         def fmt(val):
             return str(round(val, 2)) if not pd.isna(val) else "N/A"
             
-        trend = "BULLISH" if latest.get('ema_20', 0) > latest.get('ema_50', 0) else "BEARISH"
+        trend = "BULLISH" if latest.get('ema21', 0) > latest.get('ema50', 0) else "BEARISH"
         
         return {
             "asset": asset,
             "trend": trend,
-            "ema": f"{fmt(latest.get('ema_20'))} / {fmt(latest.get('ema_50'))}",
-            "rsi": fmt(latest.get('rsi')),
+            "ema": f"{fmt(latest.get('ema21'))} / {fmt(latest.get('ema50'))}",
+            "rsi": fmt(latest.get('rsi14')),
             "macd": fmt(latest.get('macd')),
-            "adx": fmt(latest.get('adx')),
-            "atr": fmt(latest.get('atr')),
+            "adx": fmt(latest.get('adx14')),
+            "atr": fmt(latest.get('atr14')),
             "vwap": fmt(latest.get('vwap')),
             "volume": fmt(latest.get('volume')),
-            "support": fmt(latest.get('support')),
-            "resistance": fmt(latest.get('resistance')),
+            "support": "N/A", # Support/Resistance not calculated natively yet, can be added later
+            "resistance": "N/A",
             "message": f"Real-time {base_tf} Technicals"
         }
     except Exception as e:
@@ -158,18 +147,9 @@ async def get_strategy(asset: str):
         
         # Validate trade plan
         plan = validate_and_build_trade_plan(
-            asset_id=asset,
-            direction=signal.get("direction", "NO_TRADE"),
-            entry_price=signal.get("entry", 0),
-            stop_loss=signal.get("stop_loss", 0),
-            target_1=signal.get("target_1", 0),
-            target_2=signal.get("target_2", 0),
-            signal_strength=signal.get("signal_strength", 0),
-            trade_quality=100 if signal.get("trade_quality") == "HIGH" else (50 if signal.get("trade_quality") == "MEDIUM" else 0),
-            invalidation_level=signal.get("invalidation", ""),
-            reasons=signal.get("reasons", []),
-            warnings=signal.get("warnings", []),
-            min_rr=1.0 # Lowered slightly for demonstration
+            raw_signal=signal,
+            data_df=data_dict[strategy.timeframes[0]],
+            min_rr=1.0
         )
         
         plan['strategy_name'] = strategy.__class__.__name__

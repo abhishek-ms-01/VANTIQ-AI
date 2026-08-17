@@ -12,7 +12,7 @@ export default function MarketOverview({ marketData, assetInfo }) {
         );
     }
 
-    const priceChange = marketData.change_percentage || 0;
+    const priceChange = marketData.change_percent || 0;
     const isUp = priceChange > 0;
     const isDown = priceChange < 0;
 
@@ -36,7 +36,7 @@ export default function MarketOverview({ marketData, assetInfo }) {
             <div className="flex flex-row md:flex-col items-center md:items-end gap-4 md:gap-1 text-sm text-light-muted dark:text-dark-muted font-medium">
                 <div className="flex items-center gap-2">
                     <span className="relative flex h-2.5 w-2.5">
-                      {marketData.status === 'OPEN' ? (
+                      {marketData.market_status === 'OPEN' ? (
                           <>
                               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
                               <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500"></span>
@@ -46,7 +46,7 @@ export default function MarketOverview({ marketData, assetInfo }) {
                       )}
                     </span>
                     <span className="uppercase tracking-wider font-bold">
-                        {marketData.status === 'OPEN' ? 'LIVE' : marketData.status || 'CLOSED'}
+                        {marketData.market_status === 'OPEN' ? 'LIVE' : marketData.market_status || 'CLOSED'}
                     </span>
                 </div>
                 <div>Updated: {new Date(marketData.timestamp || Date.now()).toLocaleTimeString()}</div>

@@ -1,4 +1,5 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+// Dynamically use the current hostname so mobile devices on Wi-Fi can hit the backend
+const API_BASE_URL = import.meta.env.VITE_API_URL || `http://${window.location.hostname}:8000/api`;
 
 export const fetchHealth = async () => {
     const response = await fetch(`${API_BASE_URL}/health`);

@@ -1,7 +1,16 @@
 import React from 'react';
 
 export default function TradeSignal({ strategyData }) {
-    if (!strategyData) return null;
+    if (!strategyData || strategyData.status === 'error' || strategyData.status === 'DATA_UNAVAILABLE') {
+        return (
+            <div className="card p-6 mb-6 shadow-sm">
+                <h3 className="text-lg font-bold mb-4 border-b border-light-border dark:border-dark-border pb-2 tracking-wide uppercase text-sm text-light-muted dark:text-dark-muted">
+                    Trade Decision
+                </h3>
+                <div className="text-sm text-muted text-center py-4">Strategy Data Unavailable</div>
+            </div>
+        );
+    }
 
     const {
         direction,

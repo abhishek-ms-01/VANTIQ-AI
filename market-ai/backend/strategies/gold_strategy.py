@@ -33,6 +33,14 @@ class GoldStrategy:
             df['atr14'] = calculate_atr(df, 14)
             # Volatility filter (detect extended candles)
             df['candle_size'] = abs(df['close'] - df['open'])
+            
+            # VWAP
+            from indicators import calculate_vwap
+            if isinstance(df.index, pd.DatetimeIndex):
+                df['vwap'] = calculate_vwap(df)
+            else:
+                df['vwap'] = df['close']
+                
             data[tf] = df
         return data
 
@@ -65,62 +73,72 @@ class GoldStrategy:
         last1h = df1h.iloc[-1]
         last4h = df4h.iloc[-1]
         
-        # Avoid extended candles
-        if last15['candle_size'] > last15['atr14'] * 2.5:
-            return self._build_no_trade("Recent candle too extended (Volatility filter)")
-            
-        # Avoid weak trends
-        if last1h['adx14'] < 20:
-            return self._build_no_trade("Weak trend: 1H ADX < 20")
-        
         # Check Long conditions
         long_cond = {
             '4h_trend': last4h['ema50'] > last4h['ema200'],
             '1h_trend': last1h['ema21'] > last1h['ema50'],
+            '15m_vwap': last15['close'] > last15['vwap'],
             '1h_adx': last1h['adx14'] > 25,
             '15m_pullback': self._is_pullback_toward(last15['low'], last15['ema21'], last15['atr14']),
             '15m_rsi': prev15['rsi14'] < 50 and last15['rsi14'] > 50, # RSI recovery above 50
-            '15m_macd': last15['macd'] > 0 # MACD positive
+            '15m_macd': last15['macd'] > last15['macd_signal'] # MACD bullish cross/alignment
         }
         
         # Check Short conditions
         short_cond = {
             '4h_trend': last4h['ema50'] < last4h['ema200'],
             '1h_trend': last1h['ema21'] < last1h['ema50'],
+            '15m_vwap': last15['close'] < last15['vwap'],
             '1h_adx': last1h['adx14'] > 25,
             '15m_pullback': self._is_pullback_toward(last15['high'], last15['ema21'], last15['atr14']),
             '15m_rsi': prev15['rsi14'] > 50 and last15['rsi14'] < 50, # RSI dropping below 50
-            '15m_macd': last15['macd'] < 0 # MACD negative
+            '15m_macd': last15['macd'] < last15['macd_signal'] # MACD bearish cross/alignment
         }
         
         score_weights = {
-            '4h_trend': 20, '1h_trend': 20, '1h_adx': 15,
-            '15m_pullback': 20, '15m_rsi': 15, '15m_macd': 10
+            '4h_trend': 20, '1h_trend': 20, '15m_vwap': 15, '1h_adx': 10,
+            '15m_pullback': 15, '15m_rsi': 10, '15m_macd': 10
         }
         
         long_score = sum(score_weights[k] for k, v in long_cond.items() if v)
         short_score = sum(score_weights[k] for k, v in short_cond.items() if v)
         
+        ai_eval = {
+            "long_score": long_score,
+            "short_score": short_score,
+            "long_cond": long_cond,
+            "short_cond": short_cond
+        }
+
+        # Avoid extended candles
+        if last15['candle_size'] > last15['atr14'] * 2.5:
+            return self._build_no_trade("Recent candle too extended (Volatility filter)", ai_eval)
+            
+        # Avoid weak trends - Strict ADX filter for GOLD
+        if last1h['adx14'] < 25:
+            return self._build_no_trade("Weak trend: 1H ADX < 25", ai_eval)
+        
         if (long_cond['4h_trend'] and short_cond['1h_trend']) or (short_cond['4h_trend'] and long_cond['1h_trend']):
-            return self._build_no_trade("Conflicting timeframes (1H vs 4H)")
+            return self._build_no_trade("Conflicting timeframes (1H vs 4H)", ai_eval)
             
         direction = "NO_TRADE"
         score = 0
         reasons = []
         
-        if long_cond['4h_trend'] and long_cond['1h_trend'] and long_cond['15m_pullback']:
-            if long_score >= 60:
+        # Require 4H trend, 1H trend, and VWAP alignment for high accuracy
+        if long_cond['4h_trend'] and long_cond['1h_trend'] and long_cond['15m_vwap']:
+            if long_score >= 65: # Stricter threshold
                 direction = "LONG"
                 score = long_score
                 reasons = [k for k, v in long_cond.items() if v]
-        elif short_cond['4h_trend'] and short_cond['1h_trend'] and short_cond['15m_pullback']:
-            if short_score >= 60:
+        elif short_cond['4h_trend'] and short_cond['1h_trend'] and short_cond['15m_vwap']:
+            if short_score >= 65:
                 direction = "SHORT"
                 score = short_score
                 reasons = [k for k, v in short_cond.items() if v]
                 
         if direction == "NO_TRADE":
-            return self._build_no_trade("Conditions not met")
+            return self._build_no_trade("Strict accuracy conditions not met", ai_eval)
             
         signal_data = {
             "direction": direction,
@@ -129,7 +147,8 @@ class GoldStrategy:
             "market_regime": self.detect_market_regime(data),
             "reasons": reasons,
             "warnings": [k for k, v in (long_cond if direction == "LONG" else short_cond).items() if not v],
-            "timeframes": self.timeframes
+            "timeframes": self.timeframes,
+            "ai_evaluation": ai_eval
         }
         
         setup = self.generate_trade_setup(data, direction)
@@ -138,7 +157,7 @@ class GoldStrategy:
         
         return signal_data
 
-    def _build_no_trade(self, reason: str) -> Dict[str, Any]:
+    def _build_no_trade(self, reason: str, ai_eval: dict = None) -> Dict[str, Any]:
         return {
             "direction": "NO_TRADE",
             "signal_strength": 0,
@@ -148,7 +167,8 @@ class GoldStrategy:
             "warnings": [],
             "timeframes": self.timeframes,
             "entry": 0, "stop_loss": 0, "target_1": 0, "target_2": 0,
-            "risk_reward": 0, "invalidation": "", "explanation": reason
+            "risk_reward": 0, "invalidation": "", "explanation": reason,
+            "ai_evaluation": ai_eval or {}
         }
 
     def calculate_score(self, signal_data: dict) -> int:

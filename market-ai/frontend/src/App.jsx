@@ -1,13 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import Header from './components/Header';
-import MarketTabs from './components/MarketTabs';
-import AssetSelector from './components/AssetSelector';
 import MarketOverview from './components/MarketOverview';
-import PriceChart from './components/PriceChart';
 import TradeSignal from './components/TradeSignal';
 import TechnicalPanel from './components/TechnicalPanel';
 import TimeframePanel from './components/TimeframePanel';
+import SessionTracker from './components/SessionTracker';
 import StrategyExplanation from './components/StrategyExplanation';
+import ActiveTradeManager from './components/ActiveTradeManager';
 import { fetchAssets, fetchMarket, fetchCandles, fetchAnalysis, fetchStrategy } from './api';
 
 export default function App() {
@@ -15,7 +14,7 @@ export default function App() {
         const savedTheme = localStorage.getItem('theme');
         return savedTheme ? savedTheme === 'dark' : true;
     });
-    const [activeTab, setActiveTab] = useState('INDIAN');
+    const [activeTab, setActiveTab] = useState('FOREX');
     const [assets, setAssets] = useState([]);
     const [activeAsset, setActiveAsset] = useState(null);
     const [activeTimeframe, setActiveTimeframe] = useState('15M');
@@ -122,17 +121,9 @@ export default function App() {
 
     return (
         <div className="min-h-screen">
-            <Header darkMode={darkMode} setDarkMode={setDarkMode} />
+            <Header darkMode={darkMode} setDarkMode={setDarkMode} activeAsset={activeAsset} />
             
-            <main className="max-w-7xl mx-auto px-4 pb-12">
-                <MarketTabs activeTab={activeTab} setActiveTab={setActiveTab} />
-                
-                <AssetSelector 
-                    assets={filteredAssets} 
-                    activeAsset={activeAsset} 
-                    setActiveAsset={setActiveAsset} 
-                />
-                
+            <main className="max-w-7xl mx-auto px-4 pt-6 pb-12">
                 {activeAsset && currentAssetInfo && (
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                         <div className="lg:col-span-2">
@@ -144,16 +135,19 @@ export default function App() {
                                 setActiveTimeframe={setActiveTimeframe}
                             />
                             
-                            <PriceChart candleData={candleData} strategyData={strategyData} />
-                            
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <TechnicalPanel analysisData={analysisData} />
+                            <div className="mt-6">
                                 <StrategyExplanation strategyData={strategyData} />
+                            </div>
+                            
+                            <div className="mt-4">
+                                <TechnicalPanel analysisData={analysisData} />
                             </div>
                         </div>
                         
-                        <div className="lg:col-span-1">
+                        <div className="lg:col-span-1 flex flex-col gap-0">
                             <TradeSignal strategyData={strategyData} />
+                            <ActiveTradeManager marketData={marketData} strategyData={strategyData} />
+                            <SessionTracker />
                         </div>
                     </div>
                 )}
