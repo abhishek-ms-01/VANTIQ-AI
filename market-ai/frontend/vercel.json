@@ -1,3 +1,9 @@
 {
-  "name": "vantiq-ai"
+  "name": "vantiq-ai",
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
 }

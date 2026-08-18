@@ -1,16 +1,14 @@
 from config import ASSETS
 from datetime import datetime
 import asyncio
-import httpx
 import os
+import yfinance as yf
 
 _cache = {}
 _cache_ttl = 300
 _price_cache = {}
 _price_cache_ttl = 30
 _locks = {}
-
-TWELVE_DATA_API_KEY = os.getenv("TWELVE_DATA_API_KEY", "386a97ae541945ec8d77c8479d0453cc")
 
 async def get_live_price(asset_id: str):
     if asset_id not in ASSETS:
@@ -28,38 +26,36 @@ async def get_live_price(asset_id: str):
                 return cached['data']
 
         try:
-            # Use XAU/USD for accurate Spot Gold pricing
-            symbol = "XAU/USD"
+            # Use GC=F for Gold Futures
+            symbol = "GC=F"
             
-            async with httpx.AsyncClient() as client:
-                resp = await client.get(
-                    f"https://api.twelvedata.com/quote?symbol={symbol}&apikey={TWELVE_DATA_API_KEY}", 
-                    timeout=10.0
-                )
-                data = resp.json()
-                
-                if 'code' in data and data['code'] != 200:
-                    print(f"TwelveData error: {data}")
-                    return "DATA_UNAVAILABLE"
+            def fetch_price():
+                ticker = yf.Ticker(symbol)
+                hist = ticker.history(period="5d")
+                if len(hist) == 0:
+                    raise Exception("No data returned from yfinance")
                     
-                last = float(data['close'])
-                prev = float(data['previous_close'])
-                change = float(data['change'])
-                change_pct = float(data['percent_change'])
-                
-                result = {
-                    "price": last,
-                    "previous_close": prev,
-                    "change": change,
-                    "change_percent": change_pct,
-                    "timestamp": int(now),
-                    "source": "TwelveData (XAU/USD)",
-                    "market_status": "OPEN" if data.get('is_market_open') else "CLOSED"
-                }
-                _price_cache[asset_id] = {'time': now, 'data': result}
-                return result
+                current = float(hist['Close'].iloc[-1])
+                prev_close = float(hist['Close'].iloc[-2]) if len(hist) > 1 else float(hist['Open'].iloc[-1])
+                change = current - prev_close
+                change_pct = (change / prev_close) * 100 if prev_close else 0
+                return current, prev_close, change, change_pct
+
+            current, prev_close, change, change_pct = await asyncio.to_thread(fetch_price)
+            
+            result = {
+                "price": current,
+                "previous_close": prev_close,
+                "change": change,
+                "change_percent": change_pct,
+                "timestamp": int(now),
+                "source": "Yahoo Finance (GC=F)",
+                "market_status": "OPEN"
+            }
+            _price_cache[asset_id] = {'time': now, 'data': result}
+            return result
         except Exception as e:
-            print(f"TwelveData price failed for {asset_id}: {e}")
+            print(f"yfinance price failed for {asset_id}: {e}")
             return "DATA_UNAVAILABLE"
 
 async def get_historical_candles(asset_id: str, timeframe: str):
@@ -81,47 +77,45 @@ async def get_historical_candles(asset_id: str, timeframe: str):
 
         try:
             intervals = {
-                '5M': '5min',
-                '15M': '15min',
+                '5M': '5m',
+                '15M': '15m',
                 '1H': '1h',
-                '4H': '4h',
-                '1D': '1day'
+                '4H': '1h', # Fallback to 1h since 4h is not natively supported easily
+                '1D': '1d'
             }
             
             if timeframe not in intervals:
                 return "DATA_UNAVAILABLE"
                 
-            symbol = "XAU/USD"
+            symbol = "GC=F"
+            yf_interval = intervals[timeframe]
+            period = '1y' if timeframe == '1D' else '1mo'
             
-            async with httpx.AsyncClient() as client:
-                resp = await client.get(
-                    f"https://api.twelvedata.com/time_series?symbol={symbol}&interval={intervals[timeframe]}&outputsize=100&apikey={TWELVE_DATA_API_KEY}", 
-                    timeout=10.0
-                )
-                data = resp.json()
+            def fetch_candles():
+                ticker = yf.Ticker(symbol)
+                hist = ticker.history(period=period, interval=yf_interval)
+                if len(hist) == 0:
+                    raise Exception("No candle data returned from yfinance")
+                return hist.reset_index().to_dict('records')
                 
-                if data.get('status') != 'ok':
-                    print(f"TwelveData candles error: {data}")
-                    return "DATA_UNAVAILABLE"
-                    
-                raw_candles = data['values']
-                raw_candles.reverse() # Oldest to newest
+            raw_candles = await asyncio.to_thread(fetch_candles)
+            
+            candles = []
+            for row in raw_candles[-100:]:
+                dt_val = row.get('Datetime', row.get('Date'))
+                candles.append({
+                    "timestamp": dt_val.strftime('%Y-%m-%d %H:%M:%S'),
+                    "open": float(row['Open']),
+                    "close": float(row['Close']),
+                    "high": float(row['High']),
+                    "low": float(row['Low']),
+                    "volume": float(row.get('Volume', 0))
+                })
                 
-                candles = []
-                for row in raw_candles:
-                    candles.append({
-                        "timestamp": row['datetime'],
-                        "open": float(row['open']),
-                        "close": float(row['close']),
-                        "high": float(row['high']),
-                        "low": float(row['low']),
-                        "volume": float(row.get('volume', 0))
-                    })
-                    
-                _cache[cache_key] = {'time': now, 'data': candles}
-                return candles
+            _cache[cache_key] = {'time': now, 'data': candles}
+            return candles
         except Exception as e:
-            print(f"TwelveData candles failed for {asset_id}: {e}")
+            print(f"yfinance candles failed for {asset_id}: {e}")
             return "DATA_UNAVAILABLE"
 
 def get_market_status(asset_id: str) -> str:
