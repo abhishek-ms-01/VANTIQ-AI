@@ -40,7 +40,7 @@ def check_and_send_alert(strategy_data):
                 f"*Entry:* {entry}\n"
                 f"*Stop Loss:* {sl}\n"
                 f"*Take Profit:* {tp}\n\n"
-                f"Open your Terminal: https://vantiq-ai.vercel.app/"
+                f"Open your Terminal: https://vantiq-ai-l4ba.vercel.app/"
             )
             
             # Fire and forget async request
