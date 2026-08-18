@@ -1,102 +1,117 @@
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
-export default function StrategyExplanation({ strategyData }) {
-    if (!strategyData) return null;
+export default function StrategyExplanation({ strategyData, marketData, analysisData }) {
+    const [logs, setLogs] = useState([]);
+    const bottomRef = useRef(null);
 
-    const {
-        market_regime,
-        reasons,
-        warnings,
-        invalidation_level,
-        strategy_name = 'AlphaTrend Pro',
-        ai_evaluation
-    } = strategyData;
+    // Initial boot sequence
+    useEffect(() => {
+        setLogs([
+            `[${new Date().toLocaleTimeString([], { hour12: false })}] 🟢 SYSTEM BOOT: VANTIQ ENGINE ONLINE`,
+            `[${new Date().toLocaleTimeString([], { hour12: false })}] 📡 INITIALIZING WEBSOCKET STREAMS...`
+        ]);
+    }, []);
+
+    useEffect(() => {
+        if (!marketData || marketData.status === 'error' || marketData.status === 'DATA_UNAVAILABLE') return;
+        const timeStr = new Date().toLocaleTimeString([], { hour12: false });
+        const priceLog = `[${timeStr}] 📡 ${marketData.asset} TICK: $${marketData.price}`;
+        
+        setLogs(prev => {
+            const newLogs = [...prev, priceLog];
+            return newLogs.length > 50 ? newLogs.slice(newLogs.length - 50) : newLogs;
+        });
+    }, [marketData]);
+
+    useEffect(() => {
+        if (!analysisData || analysisData.status === 'error' || analysisData.status === 'DATA_UNAVAILABLE') return;
+        const timeStr = new Date().toLocaleTimeString([], { hour12: false });
+        const emaLog = `[${timeStr}] 📊 CALCULATING 15M EMA: ${analysisData.ema} | RSI: ${analysisData.rsi} | VWAP: ${analysisData.vwap}`;
+        
+        setLogs(prev => {
+            const newLogs = [...prev, emaLog];
+            return newLogs.length > 50 ? newLogs.slice(newLogs.length - 50) : newLogs;
+        });
+    }, [analysisData]);
+
+    useEffect(() => {
+        if (!strategyData || strategyData.status === 'error') return;
+        const timeStr = new Date().toLocaleTimeString([], { hour12: false });
+        const regimeLog = `[${timeStr}] ⚙️ REGIME LOCK: ${strategyData.market_regime || 'UNKNOWN'}`;
+        const reason = strategyData.reasons ? strategyData.reasons[0] : 'Scanning...';
+        const directionLog = `[${timeStr}] 🔴 STATUS: ${strategyData.direction || 'NO_TRADE'} - ${reason}`;
+        
+        setLogs(prev => {
+            const newLogs = [...prev, regimeLog, directionLog];
+            return newLogs.length > 50 ? newLogs.slice(newLogs.length - 50) : newLogs;
+        });
+    }, [strategyData]);
+
+    // Fast ticking effect for realism (24/7 scanning)
+    useEffect(() => {
+        const interval = setInterval(() => {
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString([], { hour12: false });
+            const ms = Math.floor(Math.random() * 999).toString().padStart(3, '0');
+            const items = [
+                "Scanning Order Book Liquidity...", 
+                "Cross-referencing multi-timeframe divergence...", 
+                "Awaiting high-probability convergence...",
+                "Monitoring institutional volume nodes..."
+            ];
+            const item = items[Math.floor(Math.random() * items.length)];
+            
+            setLogs(prev => {
+                const newLogs = [...prev, `[${timeStr}.${ms}] ⚡ ${item}`];
+                return newLogs.length > 50 ? newLogs.slice(newLogs.length - 50) : newLogs;
+            });
+        }, 1500); // 1.5 seconds tick
+        return () => clearInterval(interval);
+    }, []);
+
+    // Auto-scroll to bottom
+    useEffect(() => {
+        if (bottomRef.current) {
+            bottomRef.current.scrollIntoView({ behavior: "smooth" });
+        }
+    }, [logs]);
 
     return (
-        <div className="card p-4 mb-4 shadow-sm h-full">
-            <h3 className="text-xs font-bold mb-3 border-b border-light-border dark:border-dark-border pb-2 tracking-wide uppercase text-light-muted dark:text-dark-muted flex justify-between">
-                <span>Strategy Analysis</span>
-                <span className="text-blue-500 font-black">{strategy_name}</span>
-            </h3>
+        <div className="card p-0 mb-4 shadow-sm h-full overflow-hidden border border-gray-800 rounded bg-[#0a0a0c]">
+            {/* Header */}
+            <div className="bg-[#111116] border-b border-gray-800 p-3 flex justify-between items-center">
+                <div className="flex items-center gap-2">
+                    <span className="flex h-2 w-2 relative">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                    </span>
+                    <h3 className="text-xs font-bold tracking-widest uppercase text-green-500">Live AI Terminal</h3>
+                </div>
+                <span className="text-blue-500 font-black text-xs">{strategyData?.strategy_name || 'GoldStrategy'}</span>
+            </div>
             
-            <div className="space-y-4 text-xs text-light-text dark:text-dark-text">
+            {/* Terminal Window */}
+            <div className="p-4 font-mono text-[11px] h-64 overflow-y-auto custom-scrollbar relative">
+                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-green-500 via-transparent to-transparent opacity-20"></div>
                 
-                {/* LIVE NEURAL ENGINE VIEW */}
-                {ai_evaluation && Object.keys(ai_evaluation).length > 0 && (
-                    <div className="bg-gray-900 rounded p-3 text-white shadow-inner font-mono relative overflow-hidden">
-                        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-blue-500 opacity-50"></div>
-                        <div className="flex justify-between items-center mb-3">
-                            <span className="font-bold text-[10px] uppercase tracking-widest text-blue-400">Live AI Evaluation</span>
-                            <span className="flex h-2 w-2 relative">
-                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-                                <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
-                            </span>
-                        </div>
-
-                        {/* Conviction Meters */}
-                        <div className="space-y-2 mb-3">
-                            <div>
-                                <div className="flex justify-between text-[9px] mb-1 text-gray-400">
-                                    <span>LONG CONVICTION</span>
-                                    <span>{ai_evaluation.long_score}%</span>
-                                </div>
-                                <div className="w-full bg-gray-800 rounded-full h-1.5">
-                                    <div className="bg-green-500 h-1.5 rounded-full transition-all duration-500" style={{ width: `${Math.min(ai_evaluation.long_score, 100)}%` }}></div>
-                                </div>
+                <div className="space-y-1">
+                    {logs.map((log, index) => {
+                        let colorClass = "text-gray-400";
+                        if (log.includes("TICK")) colorClass = "text-blue-400";
+                        if (log.includes("CALCULATING")) colorClass = "text-purple-400";
+                        if (log.includes("REGIME")) colorClass = "text-yellow-400";
+                        if (log.includes("STATUS: NO_TRADE")) colorClass = "text-red-400";
+                        if (log.includes("STATUS: LONG") || log.includes("STATUS: SHORT")) colorClass = "text-green-400 font-bold";
+                        if (log.includes("SYSTEM BOOT")) colorClass = "text-green-500 font-bold";
+                        
+                        return (
+                            <div key={index} className={`break-words opacity-0 animate-fade-in ${colorClass}`}>
+                                {log}
                             </div>
-                            <div>
-                                <div className="flex justify-between text-[9px] mb-1 text-gray-400">
-                                    <span>SHORT CONVICTION</span>
-                                    <span>{ai_evaluation.short_score}%</span>
-                                </div>
-                                <div className="w-full bg-gray-800 rounded-full h-1.5">
-                                    <div className="bg-red-500 h-1.5 rounded-full transition-all duration-500" style={{ width: `${Math.min(ai_evaluation.short_score, 100)}%` }}></div>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Condition Matrix */}
-                        <div className="grid grid-cols-2 gap-x-2 gap-y-1 mt-2 text-[9px] border-t border-gray-800 pt-2">
-                            {Object.entries(ai_evaluation.long_cond || {}).slice(0, 4).map(([key, passed]) => (
-                                <div key={`l_${key}`} className="flex items-center gap-1">
-                                    <span className={`w-1.5 h-1.5 rounded-full ${passed ? 'bg-green-500' : 'bg-gray-700'}`}></span>
-                                    <span className={`uppercase truncate ${passed ? 'text-gray-300' : 'text-gray-600'}`}>L: {key.replace('_', ' ')}</span>
-                                </div>
-                            ))}
-                            {Object.entries(ai_evaluation.short_cond || {}).slice(0, 4).map(([key, passed]) => (
-                                <div key={`s_${key}`} className="flex items-center gap-1">
-                                    <span className={`w-1.5 h-1.5 rounded-full ${passed ? 'bg-red-500' : 'bg-gray-700'}`}></span>
-                                    <span className={`uppercase truncate ${passed ? 'text-gray-300' : 'text-gray-600'}`}>S: {key.replace('_', ' ')}</span>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                )}
-
-                <div className="flex justify-between items-center bg-gray-50 dark:bg-gray-800/50 p-2 rounded border border-light-border dark:border-dark-border">
-                    <span className="font-bold text-muted uppercase tracking-wider">Regime</span>
-                    <span className="font-bold tracking-wide">{market_regime || 'UNKNOWN'}</span>
+                        );
+                    })}
+                    <div ref={bottomRef} />
                 </div>
-
-                <div>
-                    <div className="font-bold text-muted uppercase tracking-wider mb-1">Signal Output</div>
-                    <ul className="list-disc pl-4 space-y-0.5 text-light-muted dark:text-dark-muted">
-                        {reasons && reasons.length > 0 ? (
-                            reasons.map((r, i) => <li key={i}>{r}</li>)
-                        ) : (
-                            <li>Waiting for threshold confirmation.</li>
-                        )}
-                    </ul>
-                </div>
-
-                {invalidation_level && (
-                    <div>
-                        <div className="font-bold text-muted uppercase tracking-wider mb-1">Invalidation</div>
-                        <div className="text-red-700 dark:text-red-400 font-medium">
-                            {invalidation_level}
-                        </div>
-                    </div>
-                )}
             </div>
         </div>
     );

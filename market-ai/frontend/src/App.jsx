@@ -145,7 +145,11 @@ export default function App() {
                             />
                             
                             <div className="mt-6">
-                                <StrategyExplanation strategyData={strategyData} />
+                                <StrategyExplanation 
+                                    strategyData={strategyData} 
+                                    marketData={marketData}
+                                    analysisData={analysisData}
+                                />
                             </div>
                             
                             <div className="mt-4">
