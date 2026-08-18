@@ -330,3 +330,84 @@ class GoldStrategy:
             explanation += f" Notes: {', '.join(result['warnings'])}."
 
         return explanation 
+
+    def evaluate_active_trade(self, data: Dict[str, pd.DataFrame], trade: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Evaluates a currently active trade (Entry, SL, TP, Direction)
+        against real-time market data to give Copilot hints.
+        """
+        if '15M' not in data or data['15M'].empty:
+            return {"probability": 50, "action": "HOLD", "hints": ["Awaiting market data..."]}
+            
+        df15 = data['15M']
+        last = df15.iloc[-1]
+        current_price = last['close']
+        
+        direction = trade.get('direction', 'LONG')
+        entry = trade.get('entry', 0)
+        sl = trade.get('sl', 0)
+        tp = trade.get('tp', 0)
+        
+        hints = []
+        action = "HOLD"
+        prob = 50
+        
+        # Calculate distance and PnL
+        if direction == 'LONG':
+            pnl_points = current_price - entry
+            risk_points = entry - sl
+            reward_points = tp - entry
+            
+            # Simple probability logic
+            if pnl_points > 0:
+                prob = 50 + min(40, int((pnl_points / (reward_points or 1)) * 40))
+            else:
+                prob = 50 - min(40, int((abs(pnl_points) / (risk_points or 1)) * 40))
+                
+            # RSI checks
+            if last['rsi14'] > 75:
+                hints.append(f"15M RSI Overbought ({round(last['rsi14'])}). Consider taking partials.")
+                if pnl_points > 0: action = "TAKE PARTIAL"
+            elif last['rsi14'] < 40 and pnl_points < 0:
+                hints.append(f"Momentum weakening against LONG position.")
+                
+            # Breakeven check
+            if pnl_points > (reward_points * 0.5):
+                hints.append("Trade is 50%+ to target. Move SL to Breakeven.")
+                action = "MOVE SL"
+                
+        else: # SHORT
+            pnl_points = entry - current_price
+            risk_points = sl - entry
+            reward_points = entry - tp
+            
+            if pnl_points > 0:
+                prob = 50 + min(40, int((pnl_points / (reward_points or 1)) * 40))
+            else:
+                prob = 50 - min(40, int((abs(pnl_points) / (risk_points or 1)) * 40))
+                
+            if last['rsi14'] < 25:
+                hints.append(f"15M RSI Oversold ({round(last['rsi14'])}). Consider taking partials.")
+                if pnl_points > 0: action = "TAKE PARTIAL"
+            elif last['rsi14'] > 60 and pnl_points < 0:
+                hints.append(f"Momentum shifting against SHORT position.")
+                
+            if pnl_points > (reward_points * 0.5):
+                hints.append("Trade is 50%+ to target. Move SL to Breakeven.")
+                action = "MOVE SL"
+                
+        # VWAP check
+        if direction == 'LONG' and current_price < last['vwap']:
+            hints.append("Price fell below VWAP. Watch for rejection.")
+        elif direction == 'SHORT' and current_price > last['vwap']:
+            hints.append("Price reclaimed VWAP. Trend might reverse.")
+            
+        if not hints:
+            hints.append("Market conditions stable. Hold according to plan.")
+            
+        return {
+            "probability": max(5, min(95, prob)),
+            "action": action,
+            "hints": hints,
+            "current_price": current_price
+        }

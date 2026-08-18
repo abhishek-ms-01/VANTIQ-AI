@@ -38,3 +38,13 @@ export const fetchStrategy = async (asset) => {
     if (!response.ok) throw new Error('Network error');
     return response.json();
 };
+
+export const fetchTradeGuardian = async (asset, tradeInfo) => {
+    const response = await fetch(`${API_BASE_URL}/trade-guardian/${asset}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(tradeInfo)
+    });
+    if (!response.ok) throw new Error('Network error');
+    return response.json();
+};

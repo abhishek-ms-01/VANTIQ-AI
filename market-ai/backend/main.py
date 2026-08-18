@@ -258,3 +258,24 @@ async def get_strategy(asset: str):
     except Exception as e:
         print(f"Error in strategy: {e}")
         return {"status": "error", "message": str(e)}
+
+from pydantic import BaseModel
+
+class ActiveTradeInfo(BaseModel):
+    direction: str
+    entry: float
+    sl: float
+    tp: float
+
+@app.post("/api/trade-guardian/{asset}")
+async def evaluate_active_trade_endpoint(asset: str, trade: ActiveTradeInfo):
+    try:
+        strategy, data_dict = await get_strategy_data(asset)
+        # We need to calculate indicators
+        data_dict = strategy.calculate_indicators(data_dict)
+        
+        guardian_eval = strategy.evaluate_active_trade(data_dict, trade.dict())
+        return guardian_eval
+    except Exception as e:
+        print(f"Error in trade guardian: {e}")
+        return {"status": "error", "message": str(e)}
