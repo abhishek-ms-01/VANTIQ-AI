@@ -7,6 +7,7 @@ import TimeframePanel from './components/TimeframePanel';
 import SessionTracker from './components/SessionTracker';
 import StrategyExplanation from './components/StrategyExplanation';
 import ActiveTradeManager from './components/ActiveTradeManager';
+import MarketTabs from './components/MarketTabs';
 import { fetchAssets, fetchMarket, fetchCandles, fetchAnalysis, fetchStrategy } from './api';
 
 export default function App() {
@@ -124,7 +125,15 @@ export default function App() {
             <Header darkMode={darkMode} setDarkMode={setDarkMode} activeAsset={activeAsset} />
             
             <main className="max-w-7xl mx-auto px-4 pt-6 pb-12">
-                {activeAsset && currentAssetInfo && (
+                <MarketTabs activeTab={activeTab} setActiveTab={setActiveTab} />
+                
+                {assets.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-20">
+                        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mb-4"></div>
+                        <h2 className="text-xl font-bold text-light-text dark:text-dark-text">Connecting to VANTIQ Engine...</h2>
+                        <p className="text-light-muted dark:text-dark-muted mt-2">Waiting for backend API to initialize.</p>
+                    </div>
+                ) : activeAsset && currentAssetInfo ? (
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                         <div className="lg:col-span-2">
                             <MarketOverview marketData={marketData} assetInfo={currentAssetInfo} />
@@ -149,6 +158,10 @@ export default function App() {
                             <ActiveTradeManager marketData={marketData} strategyData={strategyData} />
                             <SessionTracker />
                         </div>
+                    </div>
+                ) : (
+                    <div className="text-center py-20 text-light-muted dark:text-dark-muted">
+                        No active asset selected or available in this category.
                     </div>
                 )}
             </main>
