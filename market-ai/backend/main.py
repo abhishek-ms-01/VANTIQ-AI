@@ -72,7 +72,7 @@ async def status_reporting_loop():
             if now_ist.hour == 5 and last_morning_greeting_date != now_ist.date():
                 quote = random.choice(motivational_quotes)
                 greeting = (
-                    f"🌅 *Good Morning!* 🌅\n\n"
+                    f"🌅 *GOOD MORNING ABHIIII!* 🌅\n\n"
                     f"_{quote}_\n\n"
                     f"VANTIQ-AI is awake and monitoring the markets for you today. Let's have a great trading day! 🚀"
                 )
