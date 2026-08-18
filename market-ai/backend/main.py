@@ -6,7 +6,9 @@ from market_data.unified import get_live_price, get_historical_candles, get_mark
 import pandas as pd
 from strategies.gold_strategy import GoldStrategy
 from risk.trade_validation import validate_and_build_trade_plan
-from notifications import check_and_send_alert
+from datetime import datetime, timezone, timedelta
+import random
+from notifications import check_and_send_alert, _send_async
 import asyncio
 
 strategy_map = {
@@ -44,6 +46,69 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+async def status_reporting_loop():
+    print("Starting Status Reporting Loop...")
+    ist_tz = timezone(timedelta(hours=5, minutes=30))
+    last_hourly_update = -1
+    last_morning_greeting_date = None
+    
+    motivational_quotes = [
+        "The best time to plant a tree was 20 years ago. The second best time is now.",
+        "Success is not final, failure is not fatal: it is the courage to continue that counts.",
+        "Discipline is the bridge between goals and accomplishment.",
+        "Don't watch the clock; do what it does. Keep going.",
+        "Risk comes from not knowing what you're doing. Stick to the strategy.",
+        "The stock market is a device for transferring money from the impatient to the patient.",
+        "Consistency is the hallmark of the unimaginative, but the foundation of profitability.",
+        "Opportunities don't happen. You create them.",
+        "Dream big, stay disciplined, and let the profits run."
+    ]
+
+    while True:
+        try:
+            now_ist = datetime.now(ist_tz)
+            
+            # 1. Daily Morning Greeting (5:00 AM)
+            if now_ist.hour == 5 and last_morning_greeting_date != now_ist.date():
+                quote = random.choice(motivational_quotes)
+                greeting = (
+                    f"🌅 *Good Morning!* 🌅\n\n"
+                    f"_{quote}_\n\n"
+                    f"VANTIQ-AI is awake and monitoring the markets for you today. Let's have a great trading day! 🚀"
+                )
+                asyncio.create_task(_send_async(greeting))
+                last_morning_greeting_date = now_ist.date()
+
+            # 2. Hourly Update
+            if last_hourly_update == -1:
+                last_hourly_update = now_ist.hour
+            elif now_ist.hour != last_hourly_update:
+                strategy, data_dict = await get_strategy_data("GOLD")
+                signal = strategy.generate_signal(data_dict)
+                regime = signal.get("market_regime", "UNKNOWN")
+                direction = signal.get("direction", "NO_TRADE")
+                score = signal.get("signal_strength", 0)
+                reasons = signal.get("reasons", ["Waiting for setups"])
+                if not reasons:
+                    reasons = ["Waiting for setups"]
+                reasons_str = ", ".join(reasons)
+                
+                status_msg = (
+                    f"⏱️ *VANTIQ-AI Hourly Update* ⏱️\n\n"
+                    f"*Asset:* GOLD (XAU/USD)\n"
+                    f"*Current Regime:* {regime}\n"
+                    f"*Next Trade Status:* {direction} (Score: {score}/100)\n"
+                    f"*AI Thoughts:* {reasons_str}\n\n"
+                    f"I am actively monitoring the charts. 🤖"
+                )
+                asyncio.create_task(_send_async(status_msg))
+                last_hourly_update = now_ist.hour
+
+            await asyncio.sleep(60)
+        except Exception as e:
+            print(f"Status reporting loop error: {e}")
+            await asyncio.sleep(60)
+
 async def autonomous_trading_loop():
     print("Starting Autonomous Trade Evaluator...")
     while True:
@@ -68,6 +133,7 @@ async def autonomous_trading_loop():
 @app.on_event("startup")
 async def startup_event():
     asyncio.create_task(autonomous_trading_loop())
+    asyncio.create_task(status_reporting_loop())
 
 @app.get("/api/health")
 async def health_check():
