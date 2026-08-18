@@ -129,10 +129,16 @@ async def autonomous_trading_loop():
         except Exception as e:
             print(f"Autonomous loop error: {e}")
 
+import os
+
 @app.on_event("startup")
 async def startup_event():
-    asyncio.create_task(autonomous_trading_loop())
-    asyncio.create_task(status_reporting_loop())
+    # Render automatically sets RENDER=true. This prevents duplicate spam when testing locally.
+    if os.environ.get("RENDER") == "true":
+        asyncio.create_task(autonomous_trading_loop())
+        asyncio.create_task(status_reporting_loop())
+    else:
+        print("Running locally - Telegram notification loops disabled to prevent duplicate spam.")
 
 @app.get("/api/health")
 async def health_check():
