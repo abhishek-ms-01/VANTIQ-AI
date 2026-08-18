@@ -158,6 +158,7 @@ async def startup_event():
         print("Running locally - Telegram notification loops disabled to prevent duplicate spam.")
 
 @app.get("/api/health")
+@app.head("/api/health")
 async def health_check():
     provider_status = {
         "twelve_data": "configured" if settings.TWELVE_DATA_API_KEY else "missing_key"
