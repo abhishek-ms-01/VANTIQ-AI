@@ -93,8 +93,9 @@ async def status_reporting_loop():
                     reasons = ["Waiting for setups"]
                 reasons_str = ", ".join(reasons)
                 
+                current_hour_str = now_ist.strftime('%I:00 %p')
                 status_msg = (
-                    f"⏱️ *VANTIQ-AI Hourly Update* ⏱️\n\n"
+                    f"⏱️ *VANTIQ-AI {current_hour_str} Update* ⏱️\n\n"
                     f"*Asset:* GOLD (XAU/USD)\n"
                     f"*Current Regime:* {regime}\n"
                     f"*Next Trade Status:* {direction} (Score: {score}/100)\n"
