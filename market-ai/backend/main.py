@@ -64,12 +64,33 @@ async def status_reporting_loop():
         "Dream big, stay disciplined, and let the profits run."
     ]
 
+    # Send a startup confirmation so the user knows the system is online immediately
+    now = datetime.now(ist_tz)
+    next_hour_startup = (now + timedelta(hours=1)).replace(minute=0, second=0, microsecond=0)
+    startup_msg = (
+        f"✅ *VANTIQ-AI System Online* ✅\n\n"
+        f"Server successfully started.\n"
+        f"Next guaranteed hourly update scheduled exactly at: {next_hour_startup.strftime('%I:00 %p')} IST.\n\n"
+        f"System is locked in for perfect punctuality. ⏱️"
+    )
+    asyncio.create_task(_send_async(startup_msg))
+
     while True:
         try:
             now_ist = datetime.now(ist_tz)
             
-            # 1. Daily Morning Greeting (5:00 AM)
-            if now_ist.hour == 5 and last_morning_greeting_date != now_ist.date():
+            # Calculate EXACT seconds until the top of the next hour
+            next_hour = (now_ist + timedelta(hours=1)).replace(minute=0, second=0, microsecond=0)
+            sleep_seconds = (next_hour - now_ist).total_seconds()
+            
+            # Sleep exactly until 00:00 minutes/seconds
+            await asyncio.sleep(sleep_seconds)
+            
+            # Woke up at exactly the top of the hour!
+            now_ist = datetime.now(ist_tz)
+            
+            # 1. Daily Morning Greeting (5:00 AM exactly)
+            if now_ist.hour == 5:
                 quote = random.choice(motivational_quotes)
                 greeting = (
                     f"🌅 *GOOD MORNING ABHIIII!* 🌅\n\n"
@@ -77,33 +98,29 @@ async def status_reporting_loop():
                     f"VANTIQ-AI is awake and monitoring the markets for you today. Let's have a great trading day! 🚀"
                 )
                 asyncio.create_task(_send_async(greeting))
-                last_morning_greeting_date = now_ist.date()
 
-            # 2. Hourly Update
-            if last_hourly_update == -1 or now_ist.hour != last_hourly_update:
-                strategy, data_dict = await get_strategy_data("GOLD")
-                signal = strategy.generate_signal(data_dict)
-                regime = signal.get("market_regime", "UNKNOWN").replace("_", " ")
-                direction = signal.get("direction", "NO_TRADE").replace("_", " ")
-                score = signal.get("signal_strength", 0)
-                reasons = signal.get("reasons", ["Waiting for setups"])
-                if not reasons:
-                    reasons = ["Waiting for setups"]
-                reasons_str = ", ".join(reasons).replace("_", " ")
-                
-                current_hour_str = now_ist.strftime('%I:00 %p')
-                status_msg = (
-                    f"⏱️ *VANTIQ-AI {current_hour_str} Update* ⏱️\n\n"
-                    f"*Asset:* GOLD (XAU/USD)\n"
-                    f"*Current Regime:* {regime}\n"
-                    f"*Next Trade Status:* {direction} (Score: {score}/100)\n"
-                    f"*AI Thoughts:* {reasons_str}\n\n"
-                    f"I am actively monitoring the charts. 🤖"
-                )
-                asyncio.create_task(_send_async(status_msg))
-                last_hourly_update = now_ist.hour
+            # 2. Hourly Update (exactly at the top of the hour)
+            strategy, data_dict = await get_strategy_data("GOLD")
+            signal = strategy.generate_signal(data_dict)
+            regime = signal.get("market_regime", "UNKNOWN").replace("_", " ")
+            direction = signal.get("direction", "NO_TRADE").replace("_", " ")
+            score = signal.get("signal_strength", 0)
+            reasons = signal.get("reasons", ["Waiting for setups"])
+            if not reasons:
+                reasons = ["Waiting for setups"]
+            reasons_str = ", ".join(reasons).replace("_", " ")
+            
+            current_hour_str = now_ist.strftime('%I:00 %p')
+            status_msg = (
+                f"⏱️ *VANTIQ-AI {current_hour_str} Update* ⏱️\n\n"
+                f"*Asset:* GOLD (XAU/USD)\n"
+                f"*Current Regime:* {regime}\n"
+                f"*Next Trade Status:* {direction} (Score: {score}/100)\n"
+                f"*AI Thoughts:* {reasons_str}\n\n"
+                f"I am actively monitoring the charts. 🤖"
+            )
+            asyncio.create_task(_send_async(status_msg))
 
-            await asyncio.sleep(60)
         except Exception as e:
             print(f"Status reporting loop error: {e}")
             await asyncio.sleep(60)
