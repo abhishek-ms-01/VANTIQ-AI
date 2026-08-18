@@ -83,13 +83,13 @@ async def status_reporting_loop():
             if last_hourly_update == -1 or now_ist.hour != last_hourly_update:
                 strategy, data_dict = await get_strategy_data("GOLD")
                 signal = strategy.generate_signal(data_dict)
-                regime = signal.get("market_regime", "UNKNOWN")
-                direction = signal.get("direction", "NO_TRADE")
+                regime = signal.get("market_regime", "UNKNOWN").replace("_", " ")
+                direction = signal.get("direction", "NO_TRADE").replace("_", " ")
                 score = signal.get("signal_strength", 0)
                 reasons = signal.get("reasons", ["Waiting for setups"])
                 if not reasons:
                     reasons = ["Waiting for setups"]
-                reasons_str = ", ".join(reasons)
+                reasons_str = ", ".join(reasons).replace("_", " ")
                 
                 current_hour_str = now_ist.strftime('%I:00 %p')
                 status_msg = (

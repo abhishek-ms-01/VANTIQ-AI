@@ -29,7 +29,7 @@ def check_and_send_alert(strategy_data):
             entry = strategy_data.get('entry', strategy_data.get('entry_price', 'Market'))
             sl = strategy_data.get('stop_loss', 'N/A')
             tp = strategy_data.get('target_1', 'N/A')
-            session = strategy_data.get('session_tier', 'UNKNOWN')
+            session = strategy_data.get('session_tier', 'UNKNOWN').replace("_", " ")
             
             message = (
                 f"🚨 *VANTIQ AI TRADE ALERT* 🚨\n\n"
