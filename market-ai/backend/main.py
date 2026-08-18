@@ -58,7 +58,9 @@ async def autonomous_trading_loop():
                 min_rr=1.0
             )
             plan['regime'] = signal.get("market_regime", "UNKNOWN")
-            plan['score'] = signal.get("score", 0)
+            plan['score'] = signal.get("signal_strength", 0)
+            plan['session_tier'] = signal.get("session_tier", "UNKNOWN")
+            plan['lots'] = signal.get("lots", 0)
             check_and_send_alert(plan)
         except Exception as e:
             print(f"Autonomous loop error: {e}")
@@ -180,7 +182,9 @@ async def get_strategy(asset: str):
         plan['strategy_name'] = strategy.__class__.__name__
         plan['market_regime'] = signal.get("market_regime", "UNKNOWN")
         plan['regime'] = signal.get("market_regime", "UNKNOWN")
-        plan['score'] = signal.get("score", 0)
+        plan['score'] = signal.get("signal_strength", 0)
+        plan['session_tier'] = signal.get("session_tier", "UNKNOWN")
+        plan['lots'] = signal.get("lots", 0)
         plan['timeframes'] = signal.get("timeframes", strategy.timeframes)
         
         check_and_send_alert(plan)
