@@ -80,9 +80,7 @@ async def status_reporting_loop():
                 last_morning_greeting_date = now_ist.date()
 
             # 2. Hourly Update
-            if last_hourly_update == -1:
-                last_hourly_update = now_ist.hour
-            elif now_ist.hour != last_hourly_update:
+            if last_hourly_update == -1 or now_ist.hour != last_hourly_update:
                 strategy, data_dict = await get_strategy_data("GOLD")
                 signal = strategy.generate_signal(data_dict)
                 regime = signal.get("market_regime", "UNKNOWN")
