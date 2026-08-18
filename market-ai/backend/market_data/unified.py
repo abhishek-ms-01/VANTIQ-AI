@@ -8,6 +8,7 @@ _cache = {}
 _cache_ttl = 300
 _price_cache = {}
 _price_cache_ttl = 30
+_locks = {}
 
 TWELVE_DATA_API_KEY = os.getenv("TWELVE_DATA_API_KEY", "386a97ae541945ec8d77c8479d0453cc")
 
@@ -15,14 +16,19 @@ async def get_live_price(asset_id: str):
     if asset_id not in ASSETS:
         raise ValueError("invalid symbol")
         
-    now = datetime.now().timestamp()
-    if asset_id in _price_cache:
-        cached = _price_cache[asset_id]
-        if now - cached['time'] < _price_cache_ttl:
-            return cached['data']
+    lock_key = f"price_{asset_id}"
+    if lock_key not in _locks:
+        _locks[lock_key] = asyncio.Lock()
+        
+    async with _locks[lock_key]:
+        now = datetime.now().timestamp()
+        if asset_id in _price_cache:
+            cached = _price_cache[asset_id]
+            if now - cached['time'] < _price_cache_ttl:
+                return cached['data']
 
-    try:
-        # Use XAU/USD for accurate Spot Gold pricing
+        try:
+            # Use XAU/USD for accurate Spot Gold pricing
         symbol = "XAU/USD"
         
         async with httpx.AsyncClient() as client:
@@ -61,15 +67,20 @@ async def get_historical_candles(asset_id: str, timeframe: str):
         raise ValueError("invalid symbol")
         
     cache_key = f"{asset_id}_{timeframe}"
-    now = datetime.now().timestamp()
     
-    if cache_key in _cache:
-        cached = _cache[cache_key]
-        if now - cached['time'] < _cache_ttl:
-            return cached['data']
+    if cache_key not in _locks:
+        _locks[cache_key] = asyncio.Lock()
+        
+    async with _locks[cache_key]:
+        now = datetime.now().timestamp()
+        
+        if cache_key in _cache:
+            cached = _cache[cache_key]
+            if now - cached['time'] < _cache_ttl:
+                return cached['data']
 
-    try:
-        intervals = {
+        try:
+            intervals = {
             '5M': '5min',
             '15M': '15min',
             '1H': '1h',
