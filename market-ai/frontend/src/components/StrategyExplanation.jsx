@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 
 export default function StrategyExplanation({ strategyData, marketData, analysisData }) {
     const [logs, setLogs] = useState([]);
-    const bottomRef = useRef(null);
+    const containerRef = useRef(null);
 
     // Initial boot sequence
     useEffect(() => {
@@ -69,10 +69,15 @@ export default function StrategyExplanation({ strategyData, marketData, analysis
         return () => clearInterval(interval);
     }, []);
 
-    // Auto-scroll to bottom
+    // Auto-scroll to bottom safely
     useEffect(() => {
-        if (bottomRef.current) {
-            bottomRef.current.scrollIntoView({ behavior: "smooth" });
+        if (containerRef.current) {
+            const container = containerRef.current;
+            // Only auto-scroll if user is near the bottom (within 100px) or on initial load
+            const isNearBottom = container.scrollHeight - container.scrollTop <= container.clientHeight + 100;
+            if (isNearBottom || logs.length < 10) {
+                container.scrollTop = container.scrollHeight;
+            }
         }
     }, [logs]);
 
@@ -91,7 +96,10 @@ export default function StrategyExplanation({ strategyData, marketData, analysis
             </div>
             
             {/* Terminal Window */}
-            <div className="p-4 font-mono text-[11px] h-64 overflow-y-auto custom-scrollbar relative">
+            <div 
+                ref={containerRef}
+                className="p-4 font-mono text-[11px] h-64 overflow-y-auto custom-scrollbar relative"
+            >
                 <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-green-500 via-transparent to-transparent opacity-20"></div>
                 
                 <div className="space-y-1">
@@ -110,7 +118,6 @@ export default function StrategyExplanation({ strategyData, marketData, analysis
                             </div>
                         );
                     })}
-                    <div ref={bottomRef} />
                 </div>
             </div>
         </div>
