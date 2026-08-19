@@ -68,7 +68,15 @@ def validate_and_build_trade_plan(
     # Targets
     tp1, tp2 = calculate_targets(direction, entry_price, data_df)
     
-    # Fallback to strategy targets if structural targets not found
+    # Check if structural tp1 gives a good RR. If not, discard it.
+    if tp1:
+        risk_dist = abs(entry_price - sl)
+        reward_dist = abs(tp1 - entry_price)
+        if risk_dist > 0 and (reward_dist / risk_dist) < min_rr:
+            tp1 = None
+            tp2 = None
+            
+    # Fallback to strategy targets if structural targets not found or discarded
     if not tp1:
         tp1 = raw_signal.get("target_1", 0.0)
     if not tp2:
