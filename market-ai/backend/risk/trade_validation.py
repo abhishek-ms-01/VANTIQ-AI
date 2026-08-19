@@ -103,7 +103,16 @@ def validate_and_build_trade_plan(
     rr_tp2 = round(reward_tp2 / risk_points, 2) if risk_points > 0 else 0.0
 
     if rr_tp1 < min_rr:
-        return _build_no_trade(["POOR_RISK_REWARD"])
+        # Instead of rejecting, forcefully adjust the target to meet the minimum R:R
+        if direction == "LONG":
+            tp1 = entry_price + (risk_points * min_rr)
+        else:
+            tp1 = entry_price - (risk_points * min_rr)
+        tp2 = tp1
+        reward_tp1 = abs(tp1 - entry_price)
+        reward_tp2 = reward_tp1
+        rr_tp1 = min_rr
+        rr_tp2 = min_rr
 
     # Trade Quality Scoring (0-100)
     trade_quality = 0

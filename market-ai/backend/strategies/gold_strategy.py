@@ -240,7 +240,7 @@ class GoldStrategy:
                 reasons = ["Shallow Trend Pullback", "RSI Momentum Rising", "Above VWAP"]
                 
             # 3. Breakout Setup (Strong Momentum, Far from EMA)
-            elif not shallow_pullback and last15["close"] > last15["ema21"] and last15["rsi14"] >= 60 and above_vwap:
+            elif not shallow_pullback and last15["close"] > last15["ema21"] and last15["rsi14"] >= 60:
                 direction = "LONG"
                 base_score = 70
                 signal_type = "BREAKOUT"
@@ -271,7 +271,7 @@ class GoldStrategy:
                 reasons = ["Shallow Trend Pullback", "RSI Momentum Falling", "Below VWAP"]
                 
             # 3. Breakout Setup (Strong Momentum, Far from EMA)
-            elif not shallow_pullback and last15["close"] < last15["ema21"] and last15["rsi14"] <= 40 and below_vwap:
+            elif not shallow_pullback and last15["close"] < last15["ema21"] and last15["rsi14"] <= 40:
                 direction = "SHORT"
                 base_score = 70
                 signal_type = "BREAKOUT"
