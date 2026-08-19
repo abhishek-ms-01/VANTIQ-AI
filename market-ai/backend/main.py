@@ -46,6 +46,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+_last_error_msg = None
+
 async def status_reporting_loop():
     print("Starting Status Reporting Loop...")
     ist_tz = timezone(timedelta(hours=5, minutes=30))
@@ -131,6 +133,12 @@ async def status_reporting_loop():
             asyncio.create_task(_send_async(status_msg))
 
         except Exception as e:
+            global _last_error_msg
+            error_str = str(e)
+            if error_str != _last_error_msg:
+                alert = f"⚠️ *VANTIQ CRITICAL ERROR*\n━━━━━━━━━━━━━━━━━━\n*Module:* Status Loop\n*Error:* `{error_str}`\n━━━━━━━━━━━━━━━━━━\n_System will retry._"
+                asyncio.create_task(_send_async(alert))
+                _last_error_msg = error_str
             print(f"Status reporting loop error: {e}")
             await asyncio.sleep(60)
 
@@ -153,7 +161,14 @@ async def autonomous_trading_loop():
             plan['lots'] = signal.get("lots", 0)
             check_and_send_alert(plan)
         except Exception as e:
+            global _last_error_msg
+            error_str = str(e)
+            if error_str != _last_error_msg:
+                alert = f"⚠️ *VANTIQ CRITICAL ERROR*\n━━━━━━━━━━━━━━━━━━\n*Module:* Trade Loop\n*Error:* `{error_str}`\n━━━━━━━━━━━━━━━━━━\n_System will retry._"
+                asyncio.create_task(_send_async(alert))
+                _last_error_msg = error_str
             print(f"Autonomous loop error: {e}")
+            await asyncio.sleep(300)
 
 import os
 
