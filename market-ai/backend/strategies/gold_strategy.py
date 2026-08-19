@@ -162,12 +162,12 @@ class GoldStrategy:
         return data
 
     def detect_market_regime(self, data: Dict[str, pd.DataFrame]) -> str:
-        if '1D' not in data or data['1D'].empty:
+        if '15M' not in data or data['15M'].empty:
             return "UNKNOWN"
-        last = data['1D'].iloc[-1]
-        if last['close'] > last['ema200'] and last['ema50'] > last['ema200']:
+        last = data['15M'].iloc[-1]
+        if last['close'] > last['ema50']:
             return "BULL"
-        if last['close'] < last['ema200'] and last['ema50'] < last['ema200']:
+        if last['close'] < last['ema50']:
             return "BEAR"
         return "RANGING"
 
@@ -198,6 +198,7 @@ class GoldStrategy:
         if regime == "RANGING" or regime == "UNKNOWN":
             return self._build_no_trade(
                 "Regime is Ranging/Unknown. Waiting for clear trend to establish.",
+                regime=regime,
                 session_tier=session_tier,
             )
 
@@ -231,16 +232,24 @@ class GoldStrategy:
                 signal_type = "SNIPER"
                 reasons = ["Deep Pullback to 50 EMA", "RSI 50 Crossover", "Above VWAP"]
                 
-            # 2. Aggressive Scalp Setup
+            # 2. Aggressive Scalp Setup (Shallow Pullback)
             elif shallow_pullback and last15["rsi14"] >= 50 and last15["rsi14"] > prev15["rsi14"] and above_vwap:
                 direction = "LONG"
                 base_score = 75
                 signal_type = "SCALP"
                 reasons = ["Shallow Trend Pullback", "RSI Momentum Rising", "Above VWAP"]
+                
+            # 3. Breakout Setup (Strong Momentum, Far from EMA)
+            elif not shallow_pullback and last15["close"] > last15["ema21"] and 60 <= last15["rsi14"] <= 75 and above_vwap:
+                direction = "LONG"
+                base_score = 70
+                signal_type = "BREAKOUT"
+                reasons = ["Strong Bullish Breakout", "RSI Momentum > 60", "Above VWAP and EMA21"]
             
             else:
                 if not above_vwap: warnings.append("Price below VWAP")
-                if not shallow_pullback: warnings.append("Not in pullback zone")
+                if not shallow_pullback and not (last15["close"] > last15["ema21"] and 60 <= last15["rsi14"] <= 75): 
+                    warnings.append("Not in pullback zone, and breakout momentum insufficient")
                 if last15["rsi14"] < 50: warnings.append("RSI is bearish (<50)")
                 elif last15["rsi14"] <= prev15["rsi14"]: warnings.append("RSI momentum falling")
 
@@ -254,16 +263,24 @@ class GoldStrategy:
                 signal_type = "SNIPER"
                 reasons = ["Deep Pullback to 50 EMA", "RSI 50 Crossover", "Below VWAP"]
                 
-            # 2. Aggressive Scalp Setup
+            # 2. Aggressive Scalp Setup (Shallow Pullback)
             elif shallow_pullback and last15["rsi14"] <= 50 and last15["rsi14"] < prev15["rsi14"] and below_vwap:
                 direction = "SHORT"
                 base_score = 75
                 signal_type = "SCALP"
                 reasons = ["Shallow Trend Pullback", "RSI Momentum Falling", "Below VWAP"]
                 
+            # 3. Breakout Setup (Strong Momentum, Far from EMA)
+            elif not shallow_pullback and last15["close"] < last15["ema21"] and 25 <= last15["rsi14"] <= 40 and below_vwap:
+                direction = "SHORT"
+                base_score = 70
+                signal_type = "BREAKOUT"
+                reasons = ["Strong Bearish Breakout", "RSI Momentum < 40", "Below VWAP and EMA21"]
+                
             else:
                 if not below_vwap: warnings.append("Price above VWAP")
-                if not shallow_pullback: warnings.append("Not in pullback zone")
+                if not shallow_pullback and not (last15["close"] < last15["ema21"] and 25 <= last15["rsi14"] <= 40): 
+                    warnings.append("Not in pullback zone, and breakout momentum insufficient")
                 if last15["rsi14"] > 50: warnings.append("RSI is bullish (>50)")
                 elif last15["rsi14"] >= prev15["rsi14"]: warnings.append("RSI momentum rising")
 
