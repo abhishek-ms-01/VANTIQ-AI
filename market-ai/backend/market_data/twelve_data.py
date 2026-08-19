@@ -9,22 +9,17 @@ candle_cache = {}
 QUOTE_TTL = 10
 CANDLE_TTL = 300
 
-# API Key Rotation Logic
-api_keys = []
-if settings.TWELVE_DATA_API_KEY:
-    api_keys = [k.strip() for k in settings.TWELVE_DATA_API_KEY.split(",") if k.strip()]
+api_keys = [k.strip() for k in (settings.TWELVE_DATA_API_KEY or "").split(",") if k.strip()]
 current_key_idx = 0
 
-def get_active_key():
-    if not api_keys:
-        return None
-    return api_keys[current_key_idx]
+def get_current_api_key():
+    return api_keys[current_key_idx] if api_keys else None
 
-def rotate_key():
+def advance_api_key():
     global current_key_idx
-    if len(api_keys) > 1:
+    if api_keys:
         current_key_idx = (current_key_idx + 1) % len(api_keys)
-        print(f"🔄 Rotating TwelveData API Key. Now using key index: {current_key_idx}")
+        print(f"Rotated TwelveData API Key to index {current_key_idx}")
 
 async def get_twelve_data_live_price(symbol: str):
     if not api_keys:
@@ -34,27 +29,25 @@ async def get_twelve_data_live_price(symbol: str):
     if symbol in quote_cache and now - quote_cache[symbol]['time'] < QUOTE_TTL:
         return quote_cache[symbol]['data']
         
-    for attempt in range(4):
-        active_key = get_active_key()
-        url = f"https://api.twelvedata.com/quote?symbol={symbol}&exchange=OANDA&apikey={active_key}"
-        
+    for attempt in range(3):
         try:
+            api_key = get_current_api_key()
+            url = f"https://api.twelvedata.com/quote?symbol={symbol}&exchange=OANDA&apikey={api_key}"
+            
             async with httpx.AsyncClient() as client:
                 response = await client.get(url, timeout=10.0)
-                
                 if response.status_code == 429:
-                    rotate_key()
-                    await asyncio.sleep(1)
+                    advance_api_key()
+                    await asyncio.sleep(2 ** attempt)
                     continue
-                    
                 if response.status_code != 200:
                     raise Exception(f"API unavailable: {response.status_code}")
                 
                 data = response.json()
                 
                 if "code" in data and data["code"] == 429:
-                    rotate_key()
-                    await asyncio.sleep(1)
+                    advance_api_key()
+                    await asyncio.sleep(2 ** attempt)
                     continue
                     
                 if "symbol" in data:
@@ -77,11 +70,11 @@ async def get_twelve_data_live_price(symbol: str):
                 else:
                     raise Exception(f"invalid response: {data}")
         except httpx.RequestError:
-            if attempt == 3:
+            if attempt == 2:
                 raise Exception("API network error")
             await asyncio.sleep(2 ** attempt)
 
-    raise Exception("API unavailable after retries (Rate Limit Exhausted)")
+    raise Exception("API unavailable after retries")
 
 async def get_twelve_data_historical_candles(symbol: str, timeframe: str):
     if not api_keys:
@@ -95,27 +88,25 @@ async def get_twelve_data_historical_candles(symbol: str, timeframe: str):
     interval_map = {"5M": "5min", "15M": "15min", "1H": "1h", "4H": "4h", "1D": "1day"}
     interval = interval_map.get(timeframe, "1day")
     
-    for attempt in range(4):
-        active_key = get_active_key()
-        url = f"https://api.twelvedata.com/time_series?symbol={symbol}&interval={interval}&exchange=OANDA&apikey={active_key}&outputsize=100"
-        
+    for attempt in range(3):
         try:
+            api_key = get_current_api_key()
+            url = f"https://api.twelvedata.com/time_series?symbol={symbol}&interval={interval}&exchange=OANDA&apikey={api_key}&outputsize=100"
+            
             async with httpx.AsyncClient() as client:
                 response = await client.get(url, timeout=10.0)
-                
                 if response.status_code == 429:
-                    rotate_key()
-                    await asyncio.sleep(1)
+                    advance_api_key()
+                    await asyncio.sleep(2 ** attempt)
                     continue
-                    
                 if response.status_code != 200:
                     raise Exception("API unavailable")
                     
                 data = response.json()
                 
                 if "code" in data and data["code"] == 429:
-                    rotate_key()
-                    await asyncio.sleep(1)
+                    advance_api_key()
+                    await asyncio.sleep(2 ** attempt)
                     continue
                     
                 if "values" in data:
@@ -135,8 +126,8 @@ async def get_twelve_data_historical_candles(symbol: str, timeframe: str):
                 else:
                     raise Exception("invalid response")
         except httpx.RequestError:
-            if attempt == 3:
+            if attempt == 2:
                 raise Exception("API network error")
             await asyncio.sleep(2 ** attempt)
             
-    raise Exception("API unavailable after retries (Rate Limit Exhausted)")
+    raise Exception("API unavailable after retries")

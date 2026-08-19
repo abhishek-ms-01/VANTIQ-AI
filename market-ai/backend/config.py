@@ -2,7 +2,7 @@ from pydantic_settings import BaseSettings
 from typing import Dict, Any
 
 class Settings(BaseSettings):
-    TWELVE_DATA_API_KEY: str = "1542558161bd4b6aa75f68a479b46a69"
+    TWELVE_DATA_API_KEY: str = "1542558161bd4b6aa75f68a479b46a69,386a97ae541945ec8d77c8479d0453cc"
     
     class Config:
         env_file = ".env"
