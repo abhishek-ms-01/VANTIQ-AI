@@ -18,22 +18,31 @@ def get_current_api_key():
 
 async def _notify_rotation(new_idx, new_key):
     try:
-        url = f"https://api.twelvedata.com/api_usage?apikey={new_key}"
+        stats = []
         async with httpx.AsyncClient() as client:
-            resp = await client.get(url, timeout=5.0)
-            data = resp.json()
-            daily_used = data.get("daily_usage", 0)
-            plan_limit = data.get("plan_daily_limit", 800)
-            remaining = max(0, plan_limit - daily_used)
-            
-            msg = (
-                f"🔄 *API KEY ROTATION*\n"
-                f"━━━━━━━━━━━━━━━━━━\n"
-                f"TwelveData Rate Limit Reached.\n"
-                f"Seamlessly switched to Key #{new_idx + 1}.\n"
-                f"📊 *Remaining API Credits:* {remaining}/{plan_limit}"
-            )
-            await _send_async(msg)
+            for i, key in enumerate(api_keys):
+                url = f"https://api.twelvedata.com/api_usage?apikey={key}"
+                resp = await client.get(url, timeout=5.0)
+                data = resp.json()
+                daily_used = data.get("daily_usage", 0)
+                plan_limit = data.get("plan_daily_limit", 800)
+                remaining = max(0, plan_limit - daily_used)
+                
+                status_icon = "✅" if i == new_idx else "⏸️"
+                active_text = " (ACTIVE)" if i == new_idx else ""
+                stats.append(f"{status_icon} Key #{i+1}: {remaining}/{plan_limit} remaining{active_text}")
+        
+        stats_str = "\n".join(stats)
+        
+        msg = (
+            f"🔄 *API KEY ROTATION*\n"
+            f"━━━━━━━━━━━━━━━━━━\n"
+            f"TwelveData Rate Limit Reached.\n"
+            f"Seamlessly switched to Key #{new_idx + 1}.\n\n"
+            f"📊 *Daily API Balances:*\n"
+            f"{stats_str}"
+        )
+        await _send_async(msg)
     except Exception:
         msg = f"🔄 *API KEY ROTATION*\n━━━━━━━━━━━━━━━━━━\nTwelveData Rate Limit Reached.\nSeamlessly switched to Key #{new_idx + 1}."
         await _send_async(msg)
