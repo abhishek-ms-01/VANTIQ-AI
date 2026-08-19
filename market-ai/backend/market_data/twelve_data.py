@@ -16,13 +16,35 @@ current_key_idx = 0
 def get_current_api_key():
     return api_keys[current_key_idx] if api_keys else None
 
+async def _notify_rotation(new_idx, new_key):
+    try:
+        url = f"https://api.twelvedata.com/api_usage?apikey={new_key}"
+        async with httpx.AsyncClient() as client:
+            resp = await client.get(url, timeout=5.0)
+            data = resp.json()
+            daily_used = data.get("daily_usage", 0)
+            plan_limit = data.get("plan_daily_limit", 800)
+            remaining = max(0, plan_limit - daily_used)
+            
+            msg = (
+                f"🔄 *API KEY ROTATION*\n"
+                f"━━━━━━━━━━━━━━━━━━\n"
+                f"TwelveData Rate Limit Reached.\n"
+                f"Seamlessly switched to Key #{new_idx + 1}.\n"
+                f"📊 *Remaining API Credits:* {remaining}/{plan_limit}"
+            )
+            await _send_async(msg)
+    except Exception:
+        msg = f"🔄 *API KEY ROTATION*\n━━━━━━━━━━━━━━━━━━\nTwelveData Rate Limit Reached.\nSeamlessly switched to Key #{new_idx + 1}."
+        await _send_async(msg)
+
 def advance_api_key(failed_idx):
     global current_key_idx
     if api_keys and current_key_idx == failed_idx:
         current_key_idx = (current_key_idx + 1) % len(api_keys)
-        msg = f"🔄 *API KEY ROTATION*\n━━━━━━━━━━━━━━━━━━\nTwelveData API Limit Reached.\nSeamlessly switched to Key #{current_key_idx + 1}."
+        new_key = api_keys[current_key_idx]
         try:
-            asyncio.create_task(_send_async(msg))
+            asyncio.create_task(_notify_rotation(current_key_idx, new_key))
         except Exception:
             pass
         print(f"Rotated TwelveData API Key to index {current_key_idx}")
