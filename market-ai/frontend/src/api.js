@@ -1,7 +1,7 @@
 // Use local backend for development, and Render for production
 const API_BASE_URL = import.meta.env.DEV 
     ? 'http://localhost:8000/api' 
-    : (import.meta.env.VITE_API_URL || 'https://vantiq-ai.onrender.com/api');
+    : (import.meta.env.VITE_API_URL || 'https://vantiq-ai-1.onrender.com/api');
 
 export const fetchHealth = async () => {
     const response = await fetch(`${API_BASE_URL}/health`);
