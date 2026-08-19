@@ -17,7 +17,7 @@ async def get_twelve_data_live_price(symbol: str):
     if symbol in quote_cache and now - quote_cache[symbol]['time'] < QUOTE_TTL:
         return quote_cache[symbol]['data']
         
-    url = f"https://api.twelvedata.com/quote?symbol={symbol}&apikey={settings.TWELVE_DATA_API_KEY}"
+    url = f"https://api.twelvedata.com/quote?symbol={symbol}&exchange=OANDA&apikey={settings.TWELVE_DATA_API_KEY}"
     
     for attempt in range(3):
         try:
@@ -72,7 +72,7 @@ async def get_twelve_data_historical_candles(symbol: str, timeframe: str):
         
     interval_map = {"5M": "5min", "15M": "15min", "1H": "1h", "4H": "4h", "1D": "1day"}
     interval = interval_map.get(timeframe, "1day")
-    url = f"https://api.twelvedata.com/time_series?symbol={symbol}&interval={interval}&apikey={settings.TWELVE_DATA_API_KEY}&outputsize=100"
+    url = f"https://api.twelvedata.com/time_series?symbol={symbol}&interval={interval}&exchange=OANDA&apikey={settings.TWELVE_DATA_API_KEY}&outputsize=100"
     
     for attempt in range(3):
         try:

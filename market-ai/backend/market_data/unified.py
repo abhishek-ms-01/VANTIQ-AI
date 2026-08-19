@@ -29,6 +29,16 @@ async def get_live_price(asset_id: str):
             if now - cached['time'] < _price_cache_ttl:
                 return cached['data']
 
+        asset_info = ASSETS.get(asset_id)
+        if asset_info and asset_info.get("provider") == "twelve_data":
+            try:
+                from market_data.twelve_data import get_twelve_data_live_price
+                result = await get_twelve_data_live_price(asset_info["provider_symbol"])
+                _price_cache[asset_id] = {'time': now, 'data': result}
+                return result
+            except Exception as e:
+                print(f"TwelveData failed: {e}. Falling back to yfinance.")
+
         try:
             symbol = "GC=F"
             
@@ -84,6 +94,16 @@ async def get_historical_candles(asset_id: str, timeframe: str):
             cached = _cache[cache_key]
             if now - cached['time'] < _cache_ttl:
                 return cached['data']
+
+        asset_info = ASSETS.get(asset_id)
+        if asset_info and asset_info.get("provider") == "twelve_data":
+            try:
+                from market_data.twelve_data import get_twelve_data_historical_candles
+                candles = await get_twelve_data_historical_candles(asset_info["provider_symbol"], timeframe)
+                _cache[cache_key] = {'time': now, 'data': candles}
+                return candles
+            except Exception as e:
+                print(f"TwelveData candles failed: {e}. Falling back to yfinance.")
 
         try:
             intervals = {
