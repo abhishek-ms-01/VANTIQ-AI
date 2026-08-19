@@ -340,13 +340,18 @@ class GoldStrategy:
 
     def _build_no_trade(self, reason: str, warnings: list = None, regime: str = "UNKNOWN",
                          session_tier: str = "UNKNOWN") -> Dict[str, Any]:
+        
+        reasons_list = [reason]
+        if warnings:
+            reasons_list.extend(warnings)
+            
         return {
             "direction": "NO_TRADE",
             "signal_strength": 0,
             "trade_quality": "NONE",
             "market_regime": regime,
             "session_tier": session_tier,
-            "reasons": [reason],
+            "reasons": reasons_list,
             "warnings": warnings or [],
             "timeframes": self.timeframes,
             "entry": 0, "stop_loss": 0, "target_1": 0, "target_2": 0,
