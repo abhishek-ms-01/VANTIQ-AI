@@ -246,12 +246,12 @@ class GoldStrategy:
                 signal_type = "BREAKOUT"
                 reasons = ["Strong Bullish Breakout", "RSI Momentum > 60", "Above VWAP and EMA21"]
             
+            # 4. Micro-Scalp (Unrestricted)
             else:
-                if not above_vwap: warnings.append("Price below VWAP")
-                if not shallow_pullback and not (last15["close"] > last15["ema21"] and last15["rsi14"] >= 60): 
-                    warnings.append("Not in pullback zone, and breakout momentum insufficient")
-                if last15["rsi14"] < 50: warnings.append("RSI is bearish (<50)")
-                elif last15["rsi14"] <= prev15["rsi14"]: warnings.append("RSI momentum falling")
+                direction = "LONG"
+                base_score = 50
+                signal_type = "MICRO SCALP"
+                reasons = ["General Trend Continuation"]
 
         elif regime == "BEAR":
             below_vwap = last15["close"] <= last15["vwap"]
@@ -277,12 +277,12 @@ class GoldStrategy:
                 signal_type = "BREAKOUT"
                 reasons = ["Strong Bearish Breakout", "RSI Momentum < 40", "Below VWAP and EMA21"]
                 
+            # 4. Micro-Scalp (Unrestricted)
             else:
-                if not below_vwap: warnings.append("Price above VWAP")
-                if not shallow_pullback and not (last15["close"] < last15["ema21"] and last15["rsi14"] <= 40): 
-                    warnings.append("Not in pullback zone, and breakout momentum insufficient")
-                if last15["rsi14"] > 50: warnings.append("RSI is bullish (>50)")
-                elif last15["rsi14"] >= prev15["rsi14"]: warnings.append("RSI momentum rising")
+                direction = "SHORT"
+                base_score = 50
+                signal_type = "MICRO SCALP"
+                reasons = ["General Trend Continuation"]
 
         if direction == "NO_TRADE":
             return self._build_no_trade(
