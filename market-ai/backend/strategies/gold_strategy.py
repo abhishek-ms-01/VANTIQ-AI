@@ -188,7 +188,15 @@ class GoldStrategy:
         prev15 = df15.iloc[-2]
 
         ts = df15.index[-1]
-        hour_gmt = ts.tz_convert("UTC").hour if ts.tzinfo else ts.hour
+        # Always interpret the candle timestamp as UTC regardless of whether
+        # tzinfo is attached. TwelveData returns naive UTC timestamps, and
+        # reading .hour directly without this fix causes incorrect session labels.
+        if ts.tzinfo is not None:
+            hour_gmt = ts.tz_convert("UTC").hour
+        else:
+            # Treat as UTC explicitly
+            import datetime as _dt
+            hour_gmt = ts.to_pydatetime().replace(tzinfo=_dt.timezone.utc).hour
 
         session_tier = self.session_cfg.get_tier(hour_gmt)
         tier_settings = self.session_cfg.get_tier_settings(hour_gmt)
