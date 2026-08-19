@@ -3,6 +3,7 @@ from config import settings
 from datetime import datetime
 import time
 import asyncio
+from notifications import _send_async
 
 quote_cache = {}
 candle_cache = {}
@@ -15,10 +16,15 @@ current_key_idx = 0
 def get_current_api_key():
     return api_keys[current_key_idx] if api_keys else None
 
-def advance_api_key():
+def advance_api_key(failed_idx):
     global current_key_idx
-    if api_keys:
+    if api_keys and current_key_idx == failed_idx:
         current_key_idx = (current_key_idx + 1) % len(api_keys)
+        msg = f"🔄 *API KEY ROTATION*\n━━━━━━━━━━━━━━━━━━\nTwelveData API Limit Reached.\nSeamlessly switched to Key #{current_key_idx + 1}."
+        try:
+            asyncio.create_task(_send_async(msg))
+        except Exception:
+            pass
         print(f"Rotated TwelveData API Key to index {current_key_idx}")
 
 async def get_twelve_data_live_price(symbol: str):
@@ -31,13 +37,14 @@ async def get_twelve_data_live_price(symbol: str):
         
     for attempt in range(3):
         try:
+            idx_used = current_key_idx
             api_key = get_current_api_key()
             url = f"https://api.twelvedata.com/quote?symbol={symbol}&exchange=OANDA&apikey={api_key}"
             
             async with httpx.AsyncClient() as client:
                 response = await client.get(url, timeout=10.0)
                 if response.status_code == 429:
-                    advance_api_key()
+                    advance_api_key(idx_used)
                     await asyncio.sleep(2 ** attempt)
                     continue
                 if response.status_code != 200:
@@ -46,7 +53,7 @@ async def get_twelve_data_live_price(symbol: str):
                 data = response.json()
                 
                 if "code" in data and data["code"] == 429:
-                    advance_api_key()
+                    advance_api_key(idx_used)
                     await asyncio.sleep(2 ** attempt)
                     continue
                     
@@ -90,13 +97,14 @@ async def get_twelve_data_historical_candles(symbol: str, timeframe: str):
     
     for attempt in range(3):
         try:
+            idx_used = current_key_idx
             api_key = get_current_api_key()
             url = f"https://api.twelvedata.com/time_series?symbol={symbol}&interval={interval}&exchange=OANDA&apikey={api_key}&outputsize=100"
             
             async with httpx.AsyncClient() as client:
                 response = await client.get(url, timeout=10.0)
                 if response.status_code == 429:
-                    advance_api_key()
+                    advance_api_key(idx_used)
                     await asyncio.sleep(2 ** attempt)
                     continue
                 if response.status_code != 200:
@@ -105,7 +113,7 @@ async def get_twelve_data_historical_candles(symbol: str, timeframe: str):
                 data = response.json()
                 
                 if "code" in data and data["code"] == 429:
-                    advance_api_key()
+                    advance_api_key(idx_used)
                     await asyncio.sleep(2 ** attempt)
                     continue
                     
