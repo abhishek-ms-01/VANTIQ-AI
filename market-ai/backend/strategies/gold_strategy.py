@@ -172,7 +172,8 @@ class GoldStrategy:
         return "RANGING"
 
     def _is_pullback_toward(self, current_price: float, ma_value: float, atr: float, atr_mult: float) -> bool:
-        return abs(current_price - ma_value) <= (0.6 * atr * atr_mult)
+        # Relaxed from 0.6 to 1.2 to allow shallower pullbacks in high volatility markets
+        return abs(current_price - ma_value) <= (1.2 * atr * atr_mult)
 
     def generate_signal(self, data: Dict[str, pd.DataFrame]) -> Dict[str, Any]:
         data = self.calculate_indicators(data)
@@ -222,12 +223,13 @@ class GoldStrategy:
         base_score = 0
 
         if regime == "BULL" and pullback_zone:
-            momentum_resumed = prev15["rsi14"] < 50 <= last15["rsi14"]
+            # Relaxed RSI logic: RSI is above 50 and curling up (momentum resuming)
+            momentum_resumed = last15["rsi14"] >= 50 and last15["rsi14"] > prev15["rsi14"]
             above_vwap = last15["close"] >= last15["vwap"]
             if momentum_resumed and above_vwap:
                 direction = "LONG"
                 base_score = 85
-                reasons = ["Bull regime pullback to EMA50", "RSI reclaimed 50", "Above VWAP"]
+                reasons = ["Bull regime pullback near EMA50", "RSI momentum rising", "Above VWAP"]
             else:
                 if not momentum_resumed:
                     warnings.append("RSI hasn't reclaimed 50")
@@ -235,12 +237,13 @@ class GoldStrategy:
                     warnings.append("Price below VWAP")
 
         elif regime == "BEAR" and pullback_zone:
-            momentum_resumed = prev15["rsi14"] > 50 >= last15["rsi14"]
+            # Relaxed RSI logic: RSI is below 50 and curling down
+            momentum_resumed = last15["rsi14"] <= 50 and last15["rsi14"] < prev15["rsi14"]
             below_vwap = last15["close"] <= last15["vwap"]
             if momentum_resumed and below_vwap:
                 direction = "SHORT"
                 base_score = 85
-                reasons = ["Bear regime pullback to EMA50", "RSI lost 50", "Below VWAP"]
+                reasons = ["Bear regime pullback near EMA50", "RSI momentum falling", "Below VWAP"]
             else:
                 if not momentum_resumed:
                     warnings.append("RSI hasn't lost 50")
@@ -262,8 +265,9 @@ class GoldStrategy:
 
         trade_quality = "HIGH" if score >= 75 else "MEDIUM" if score >= 55 else "LOW"
 
-        # Build trade setup -- stop distance widened for thinner sessions via atr_mult
-        stop_distance = max(current_atr * tier_settings["atr_mult"], 1e-6)
+        # Build trade setup -- ensure minimum stop distance of $1.50 (15 pips) for Gold
+        min_stop = 1.50
+        stop_distance = max(current_atr * tier_settings["atr_mult"], min_stop)
         target_distance = stop_distance * self.risk_cfg.reward_risk_ratio
         entry = last15["close"]
 
