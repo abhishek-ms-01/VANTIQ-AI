@@ -240,7 +240,7 @@ class GoldStrategy:
                 reasons = ["Shallow Trend Pullback", "RSI Momentum Rising", "Above VWAP"]
                 
             # 3. Breakout Setup (Strong Momentum, Far from EMA)
-            elif not shallow_pullback and last15["close"] > last15["ema21"] and 60 <= last15["rsi14"] <= 75 and above_vwap:
+            elif not shallow_pullback and last15["close"] > last15["ema21"] and last15["rsi14"] >= 60 and above_vwap:
                 direction = "LONG"
                 base_score = 70
                 signal_type = "BREAKOUT"
@@ -248,7 +248,7 @@ class GoldStrategy:
             
             else:
                 if not above_vwap: warnings.append("Price below VWAP")
-                if not shallow_pullback and not (last15["close"] > last15["ema21"] and 60 <= last15["rsi14"] <= 75): 
+                if not shallow_pullback and not (last15["close"] > last15["ema21"] and last15["rsi14"] >= 60): 
                     warnings.append("Not in pullback zone, and breakout momentum insufficient")
                 if last15["rsi14"] < 50: warnings.append("RSI is bearish (<50)")
                 elif last15["rsi14"] <= prev15["rsi14"]: warnings.append("RSI momentum falling")
@@ -271,7 +271,7 @@ class GoldStrategy:
                 reasons = ["Shallow Trend Pullback", "RSI Momentum Falling", "Below VWAP"]
                 
             # 3. Breakout Setup (Strong Momentum, Far from EMA)
-            elif not shallow_pullback and last15["close"] < last15["ema21"] and 25 <= last15["rsi14"] <= 40 and below_vwap:
+            elif not shallow_pullback and last15["close"] < last15["ema21"] and last15["rsi14"] <= 40 and below_vwap:
                 direction = "SHORT"
                 base_score = 70
                 signal_type = "BREAKOUT"
@@ -279,7 +279,7 @@ class GoldStrategy:
                 
             else:
                 if not below_vwap: warnings.append("Price above VWAP")
-                if not shallow_pullback and not (last15["close"] < last15["ema21"] and 25 <= last15["rsi14"] <= 40): 
+                if not shallow_pullback and not (last15["close"] < last15["ema21"] and last15["rsi14"] <= 40): 
                     warnings.append("Not in pullback zone, and breakout momentum insufficient")
                 if last15["rsi14"] > 50: warnings.append("RSI is bullish (>50)")
                 elif last15["rsi14"] >= prev15["rsi14"]: warnings.append("RSI momentum rising")
