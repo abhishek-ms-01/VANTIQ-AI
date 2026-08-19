@@ -76,13 +76,13 @@ def calculate_adx(df: pd.DataFrame, period: int = 14) -> pd.Series:
     return adx
 
 def calculate_vwap(df: pd.DataFrame) -> pd.Series:
-    """Volume Weighted Average Price (Intraday typically, but here we just calculate cumulative for the dataframe or assume sessions are handled)
-       For a continuous df, we'll calculate a rolling VWAP or cumulative. Usually VWAP resets daily.
-       If we don't have datetime to reset daily, we will use a cumulative VWAP for the provided window.
-       Assuming df has a datetime index, we can group by date.
-    """
+    """Volume Weighted Average Price"""
     q = df['volume']
     p = (df['high'] + df['low'] + df['close']) / 3
+    
+    # Forex pairs often have 0 volume reported from APIs. Fallback to typical price.
+    if q.sum() == 0:
+        return p
     
     if isinstance(df.index, pd.DatetimeIndex):
         vwap = (p * q).groupby(df.index.date).cumsum() / q.groupby(df.index.date).cumsum()
@@ -90,6 +90,8 @@ def calculate_vwap(df: pd.DataFrame) -> pd.Series:
         # Fallback to cumulative if no datetime index
         vwap = (p * q).cumsum() / q.cumsum()
         
+    # Replace any remaining NaNs (e.g. start of day with 0 volume) with typical price
+    vwap = vwap.fillna(p)
     return vwap
 
 def calculate_volume_average(series: pd.Series, period: int = 20) -> pd.Series:
