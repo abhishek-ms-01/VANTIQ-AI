@@ -241,6 +241,8 @@ class GoldStrategy:
             else:
                 if not above_vwap: warnings.append("Price below VWAP")
                 if not shallow_pullback: warnings.append("Not in pullback zone")
+                if last15["rsi14"] < 50: warnings.append("RSI is bearish (<50)")
+                elif last15["rsi14"] <= prev15["rsi14"]: warnings.append("RSI momentum falling")
 
         elif regime == "BEAR":
             below_vwap = last15["close"] <= last15["vwap"]
@@ -262,6 +264,8 @@ class GoldStrategy:
             else:
                 if not below_vwap: warnings.append("Price above VWAP")
                 if not shallow_pullback: warnings.append("Not in pullback zone")
+                if last15["rsi14"] > 50: warnings.append("RSI is bullish (>50)")
+                elif last15["rsi14"] >= prev15["rsi14"]: warnings.append("RSI momentum rising")
 
         if direction == "NO_TRADE":
             return self._build_no_trade(
