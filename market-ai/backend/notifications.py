@@ -33,9 +33,10 @@ def check_and_send_alert(strategy_data):
             sl = strategy_data.get('stop_loss')
             tp = strategy_data.get('target_1')
             session = strategy_data.get('session_tier', 'UNKNOWN').replace("_", " ")
+            setup_type = strategy_data.get('signal_type', 'STANDARD')
             
             message = (
-                f"⚡ *VANTIQ TRADE EXECUTION* ⚡\n"
+                f"⚡ *VANTIQ {setup_type} EXECUTION* ⚡\n"
                 f"━━━━━━━━━━━━━━━━━━\n"
                 f"*{emoji} ACTION:* {action} GOLD (XAU/USD)\n"
                 f"🔹 *Entry Price:* {fmt(entry)}\n"

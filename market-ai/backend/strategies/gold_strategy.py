@@ -172,8 +172,7 @@ class GoldStrategy:
         return "RANGING"
 
     def _is_pullback_toward(self, current_price: float, ma_value: float, atr: float, atr_mult: float) -> bool:
-        # Relaxed from 0.6 to 1.2 to allow shallower pullbacks in high volatility markets
-        return abs(current_price - ma_value) <= (1.2 * atr * atr_mult)
+        return abs(current_price - ma_value) <= (atr * atr_mult)
 
     def generate_signal(self, data: Dict[str, pd.DataFrame]) -> Dict[str, Any]:
         data = self.calculate_indicators(data)
@@ -213,46 +212,58 @@ class GoldStrategy:
                 session_tier=session_tier,
             )
 
-        pullback_zone = self._is_pullback_toward(
-            last15["close"], last15["ema50"], current_atr, tier_settings["atr_mult"]
-        )
+        deep_pullback = self._is_pullback_toward(last15["close"], last15["ema50"], current_atr, 0.6 * tier_settings["atr_mult"])
+        shallow_pullback = self._is_pullback_toward(last15["close"], last15["ema50"], current_atr, 1.5 * tier_settings["atr_mult"])
 
         direction = "NO_TRADE"
         reasons = []
         warnings = []
         base_score = 0
+        signal_type = "STANDARD"
 
-        if regime == "BULL" and pullback_zone:
-            # Relaxed RSI logic: RSI is above 50 and curling up (momentum resuming)
-            momentum_resumed = last15["rsi14"] >= 50 and last15["rsi14"] > prev15["rsi14"]
+        if regime == "BULL":
             above_vwap = last15["close"] >= last15["vwap"]
-            if momentum_resumed and above_vwap:
+            
+            # 1. Sniper Setup
+            if deep_pullback and prev15["rsi14"] < 50 <= last15["rsi14"] and above_vwap:
                 direction = "LONG"
-                base_score = 85
-                reasons = ["Bull regime pullback near EMA50", "RSI momentum rising", "Above VWAP"]
+                base_score = 95
+                signal_type = "SNIPER"
+                reasons = ["Deep Pullback to 50 EMA", "RSI 50 Crossover", "Above VWAP"]
+                
+            # 2. Aggressive Scalp Setup
+            elif shallow_pullback and last15["rsi14"] >= 50 and last15["rsi14"] > prev15["rsi14"] and above_vwap:
+                direction = "LONG"
+                base_score = 75
+                signal_type = "SCALP"
+                reasons = ["Shallow Trend Pullback", "RSI Momentum Rising", "Above VWAP"]
+            
             else:
-                if not momentum_resumed:
-                    warnings.append("RSI hasn't reclaimed 50")
-                if not above_vwap:
-                    warnings.append("Price below VWAP")
+                if not above_vwap: warnings.append("Price below VWAP")
+                if not shallow_pullback: warnings.append("Not in pullback zone")
 
-        elif regime == "BEAR" and pullback_zone:
-            # Relaxed RSI logic: RSI is below 50 and curling down
-            momentum_resumed = last15["rsi14"] <= 50 and last15["rsi14"] < prev15["rsi14"]
+        elif regime == "BEAR":
             below_vwap = last15["close"] <= last15["vwap"]
-            if momentum_resumed and below_vwap:
+            
+            # 1. Sniper Setup
+            if deep_pullback and prev15["rsi14"] > 50 >= last15["rsi14"] and below_vwap:
                 direction = "SHORT"
-                base_score = 85
-                reasons = ["Bear regime pullback near EMA50", "RSI momentum falling", "Below VWAP"]
+                base_score = 95
+                signal_type = "SNIPER"
+                reasons = ["Deep Pullback to 50 EMA", "RSI 50 Crossover", "Below VWAP"]
+                
+            # 2. Aggressive Scalp Setup
+            elif shallow_pullback and last15["rsi14"] <= 50 and last15["rsi14"] < prev15["rsi14"] and below_vwap:
+                direction = "SHORT"
+                base_score = 75
+                signal_type = "SCALP"
+                reasons = ["Shallow Trend Pullback", "RSI Momentum Falling", "Below VWAP"]
+                
             else:
-                if not momentum_resumed:
-                    warnings.append("RSI hasn't lost 50")
-                if not below_vwap:
-                    warnings.append("Price above VWAP")
+                if not below_vwap: warnings.append("Price above VWAP")
+                if not shallow_pullback: warnings.append("Not in pullback zone")
 
         if direction == "NO_TRADE":
-            if not pullback_zone:
-                warnings.append("Not in EMA50 pullback zone")
             return self._build_no_trade(
                 "Setup criteria not met. Waiting for next valid EMA50 pullback.",
                 warnings=warnings, regime=regime, session_tier=session_tier,
@@ -299,6 +310,7 @@ class GoldStrategy:
             "target_2": target_1,
             "risk_reward": self.risk_cfg.reward_risk_ratio,
             "invalidation": f"15M Close past {stop_loss}",
+            "signal_type": signal_type,
             "lots": lots,
         }
 
@@ -317,7 +329,7 @@ class GoldStrategy:
             "warnings": warnings or [],
             "timeframes": self.timeframes,
             "entry": 0, "stop_loss": 0, "target_1": 0, "target_2": 0,
-            "risk_reward": 0, "invalidation": "", "explanation": reason,
+            "signal_type": "NONE",
             "lots": 0
         }
 
