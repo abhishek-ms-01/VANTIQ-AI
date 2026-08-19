@@ -42,7 +42,8 @@ export default function App() {
             const data = await fetchAssets();
             setAssets(data);
         } catch (e) {
-            console.error('Failed to load assets', e);
+            console.error('Failed to load assets, retrying in 3 seconds...', e);
+            setTimeout(loadAssets, 3000); // Retry every 3 seconds while backend spins up
         }
     };
 
