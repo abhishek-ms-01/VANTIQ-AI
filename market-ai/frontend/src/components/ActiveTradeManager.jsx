@@ -187,11 +187,11 @@ export default function ActiveTradeManager({ marketData, strategyData }) {
             <div className="grid grid-cols-2 gap-3 mb-3">
                 <div className="bg-[#111116] p-2 rounded border border-gray-800">
                     <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-0.5">Entry</div>
-                    <div className="font-mono text-sm font-semibold text-white">{activeTrade.entryPrice.toFixed(2)}</div>
+                    <div className="font-mono text-sm font-semibold text-white">{activeTrade.entryPrice.toFixed(3)}</div>
                 </div>
                 <div className="bg-[#111116] p-2 rounded border border-gray-800">
                     <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-0.5">Current</div>
-                    <div className="font-mono text-sm font-semibold text-white">{currentPrice ? currentPrice.toFixed(2) : '---'}</div>
+                    <div className="font-mono text-sm font-semibold text-white">{currentPrice ? currentPrice.toFixed(3) : '---'}</div>
                 </div>
             </div>
 
@@ -240,11 +240,11 @@ export default function ActiveTradeManager({ marketData, strategyData }) {
             <div className="flex justify-between items-center text-xs font-mono border-t border-gray-800 pt-3 mb-3">
                 <div className="text-red-500">
                     <span className="font-sans font-bold uppercase text-[9px] block text-gray-500">SL</span>
-                    {activeTrade.stopLoss.toFixed(2)}
+                    {activeTrade.stopLoss.toFixed(3)}
                 </div>
                 <div className="text-green-500 text-right">
                     <span className="font-sans font-bold uppercase text-[9px] block text-gray-500">TP</span>
-                    {activeTrade.takeProfit.toFixed(2)}
+                    {activeTrade.takeProfit.toFixed(3)}
                 </div>
             </div>
 

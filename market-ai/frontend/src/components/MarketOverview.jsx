@@ -32,7 +32,7 @@ export default function MarketOverview({ marketData, assetInfo }) {
                 <h2 className="text-3xl font-black tracking-tight">{assetInfo?.display_name}</h2>
                 <div className="flex items-center gap-4 mt-2">
                     <div className="text-3xl font-mono font-semibold">
-                        {marketData.price ? marketData.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: assetInfo?.category === 'FOREX' ? 4 : 2 }) : '---'}
+                        {marketData.price ? marketData.price.toLocaleString(undefined, { minimumFractionDigits: assetInfo?.id === 'GOLD' ? 3 : 2, maximumFractionDigits: assetInfo?.id === 'GOLD' ? 3 : (assetInfo?.category === 'FOREX' ? 4 : 2) }) : '---'}
                     </div>
                     <div className={`text-lg font-bold font-mono ${changeClass}`}>
                         {marketData.price ? `${sign}${priceChange.toFixed(2)}%` : ''}
