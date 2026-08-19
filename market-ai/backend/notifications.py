@@ -23,24 +23,28 @@ def check_and_send_alert(strategy_data):
     if direction in ['LONG', 'SHORT']:
         if sig_id != _last_notified_regime:
             
-            emoji = "🟢 LONG GOLD" if direction == 'LONG' else "🔴 SHORT GOLD"
-            action = "BUY/LONG" if direction == 'LONG' else "SELL/SHORT"
+            def fmt(val):
+                return f"{float(val):.3f}" if isinstance(val, (int, float)) else str(val)
+
+            emoji = "🟢" if direction == 'LONG' else "🔴"
+            action = "BUY" if direction == 'LONG' else "SELL"
             
-            entry = strategy_data.get('entry', strategy_data.get('entry_price', 'Market'))
-            sl = strategy_data.get('stop_loss', 'N/A')
-            tp = strategy_data.get('target_1', 'N/A')
+            entry = strategy_data.get('entry', strategy_data.get('entry_price'))
+            sl = strategy_data.get('stop_loss')
+            tp = strategy_data.get('target_1')
             session = strategy_data.get('session_tier', 'UNKNOWN').replace("_", " ")
             
             message = (
-                f"🚨 *VANTIQ AI TRADE ALERT* 🚨\n\n"
-                f"{emoji}\n"
-                f"*Quality Score:* {score}/100\n"
-                f"*Session:* {session}\n"
-                f"*Action:* {action}\n"
-                f"*Entry:* {entry}\n"
-                f"*Stop Loss:* {sl}\n"
-                f"*Take Profit:* {tp}\n\n"
-                f"Open your Terminal: https://vantiq-ai-l4ba.vercel.app/"
+                f"⚡ *VANTIQ TRADE EXECUTION* ⚡\n"
+                f"━━━━━━━━━━━━━━━━━━\n"
+                f"*{emoji} ACTION:* {action} GOLD (XAU/USD)\n"
+                f"🔹 *Entry Price:* {fmt(entry)}\n"
+                f"🔹 *Take Profit:* {fmt(tp)}\n"
+                f"🔹 *Stop Loss:* {fmt(sl)}\n\n"
+                f"📊 *Context:* {session} Session\n"
+                f"🎯 *Confidence:* {score}%\n"
+                f"━━━━━━━━━━━━━━━━━━\n"
+                f"🌐 [Open VANTIQ Terminal](https://vantiq-ai-l4ba.vercel.app/)"
             )
             
             # Fire and forget async request

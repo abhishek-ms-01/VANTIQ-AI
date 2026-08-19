@@ -68,10 +68,12 @@ async def status_reporting_loop():
     now = datetime.now(ist_tz)
     next_hour_startup = (now + timedelta(hours=1)).replace(minute=0, second=0, microsecond=0)
     startup_msg = (
-        f"✅ *VANTIQ-AI System Online* ✅\n\n"
-        f"Server successfully started.\n"
-        f"Next guaranteed hourly update scheduled exactly at: {next_hour_startup.strftime('%I:00 %p')} IST.\n\n"
-        f"System is locked in for perfect punctuality. ⏱️"
+        f"🟢 *VANTIQ SYSTEM REBOOT*\n"
+        f"━━━━━━━━━━━━━━━━━━\n"
+        f"Backend engine successfully synchronized.\n"
+        f"Next scheduled scan: *{next_hour_startup.strftime('%I:00 %p')} IST*\n"
+        f"━━━━━━━━━━━━━━━━━━\n"
+        f"✓ _OANDA Data Feed: Active_"
     )
     asyncio.create_task(_send_async(startup_msg))
 
@@ -93,9 +95,13 @@ async def status_reporting_loop():
             if now_ist.hour == 5:
                 quote = random.choice(motivational_quotes)
                 greeting = (
-                    f"🌅 *GOOD MORNING ABHIIII!* 🌅\n\n"
+                    f"🏛️ *VANTIQ DESK ONLINE*\n"
+                    f"━━━━━━━━━━━━━━━━━━\n"
+                    f"Good Morning, Abhishek.\n\n"
                     f"_{quote}_\n\n"
-                    f"VANTIQ-AI is awake and monitoring the markets for you today. Let's have a great trading day! 🚀"
+                    f"✓ _Algorithms initialized for today's session._\n"
+                    f"✓ _Liquidity filters active._\n"
+                    f"━━━━━━━━━━━━━━━━━━"
                 )
                 asyncio.create_task(_send_async(greeting))
 
@@ -112,12 +118,15 @@ async def status_reporting_loop():
             
             current_hour_str = now_ist.strftime('%I:00 %p')
             status_msg = (
-                f"⏱️ *VANTIQ-AI {current_hour_str} Update* ⏱️\n\n"
-                f"*Asset:* GOLD (XAU/USD)\n"
-                f"*Current Regime:* {regime}\n"
-                f"*Next Trade Status:* {direction} (Score: {score}/100)\n"
-                f"*AI Thoughts:* {reasons_str}\n\n"
-                f"I am actively monitoring the charts. 🤖"
+                f"🏛️ *VANTIQ MARKET INTELLIGENCE*\n"
+                f"━━━━━━━━━━━━━━━━━━\n"
+                f"🕒 *Time:* {current_hour_str} IST\n"
+                f"📊 *Asset:* GOLD (XAU/USD)\n"
+                f"📈 *Trend Regime:* {regime}\n"
+                f"🎯 *Signal:* {direction} (Confidence: {score}%)\n"
+                f"💡 *Analysis:* {reasons_str}\n"
+                f"━━━━━━━━━━━━━━━━━━\n"
+                f"✓ _System active and scanning_"
             )
             asyncio.create_task(_send_async(status_msg))
 
